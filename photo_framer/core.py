@@ -99,24 +99,63 @@ def is_three_fourths(img: Image.Image) -> bool:
 
 
 def classify_source_image(img: Image.Image) -> str:
-    if is_landscape(img):
+    # Split any horizontal image. Taller/square images are handled as
+    # portrait/square for center-crop + framing.
+    if img.width > img.height:
         return "landscape_split"
-    if is_portrait_or_square(img):
-        return "portrait_or_square"
-    if is_four_thirds(img):
-        return "portrait_or_square"
-    if is_three_fourths(img):
-        return "portrait_or_square"
-    raise ValueError(
-        "Unsupported image dimensions: expected square, 4:3, 3:4, or 2:1 horizontal images (within tolerance)"
-    )
+    return "portrait_or_square"
+
+
+def resize_exact(img: Image.Image, target_w: int, target_h: int) -> Image.Image:
+    if target_w <= 0 or target_h <= 0:
+        raise ValueError("Target dimensions must be positive")
+    if img.size == (target_w, target_h):
+        return img
+    return img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+
+
+def crop_to_aspect(img: Image.Image, target_w: int, target_h: int) -> Image.Image:
+    """Center-crop `img` to match the aspect ratio of `target_w:target_h`.
+
+    Returns a new Image (may be the original object if no cropping needed).
+    """
+    w, h = img.size
+    if w <= 0 or h <= 0:
+        raise ValueError("Invalid image dimensions for cropping")
+
+    target_ratio = target_w / target_h
+    src_ratio = w / h
+
+    if abs(src_ratio - target_ratio) < 1e-9:
+        return img
+
+    if src_ratio > target_ratio:
+        # source is wider than target -> crop left/right
+        new_w = int(round(target_ratio * h))
+        left = (w - new_w) // 2
+        right = left + new_w
+        return img.crop((left, 0, right, h))
+    else:
+        # source is taller than target -> crop top/bottom
+        new_h = int(round(w / target_ratio))
+        top = (h - new_h) // 2
+        bottom = top + new_h
+        return img.crop((0, top, w, bottom))
 
 
 def split_landscape_exact(img: Image.Image) -> Tuple[Image.Image, Image.Image]:
     w, h = img.size
+    # For even widths, split exactly in half. For odd widths, remove the
+    # center column so both halves are identical width (center crop).
     mid = w // 2
-    left = img.crop((0, 0, mid, h))
-    right = img.crop((mid, 0, w, h))
+    if w % 2 == 0:
+        left = img.crop((0, 0, mid, h))
+        right = img.crop((mid, 0, w, h))
+    else:
+        # left: 0..mid-1 (width = mid)
+        # right: mid+1..w-1 (width = w - (mid+1) == mid)
+        left = img.crop((0, 0, mid, h))
+        right = img.crop((mid + 1, 0, w, h))
     return left, right
 
 
@@ -177,8 +216,12 @@ def render_framed_full(
     resized = resize_to_fit(img, avail_w, avail_h, allow_upscale)
     new_w, new_h = resized.size
 
-    x = baseline + ((avail_w - new_w) // 2)
-    y = baseline + ((avail_h - new_h) // 2)
+    # Symmetric centering: split the leftover gap evenly; when gap is odd
+    # the extra pixel will be placed on the right/bottom side.
+    gap_x = avail_w - new_w
+    gap_y = avail_h - new_h
+    x = baseline + (gap_x // 2)
+    y = baseline + (gap_y // 2)
     out.paste(resized, (x, y))
 
     border = BorderSpec(
@@ -212,7 +255,9 @@ def render_framed_split_half(
     new_w, new_h = resized.size
 
     out = Image.new("RGB", (target_w, target_h), frame_color)
-    y = baseline + ((avail_h - new_h) // 2)
+    # Symmetric vertical centering
+    gap_y = avail_h - new_h
+    y = baseline + (gap_y // 2)
 
     if side == "left":
         x = target_w - new_w
@@ -296,15 +341,33 @@ def process_all(
             if mode == "landscape_split":
                 stats.landscapes += 1
                 left_img, right_img = split_landscape_exact(img)
+                # For landscape splits, process each half into portrait 3:4
+                # orientation by center-cropping to the framed aspect ratio,
+                # then resize processed outputs to the exact target size
+                # (e.g., 1080x1440 for 3:4). Framed outputs remain the
+                # configured `target_size` with baseline frames applied.
+                target_w, target_h = cfg.target_size
 
+                # Left half -> process
+                left_cropped = crop_to_aspect(left_img, target_w, target_h)
+                left_proc = resize_exact(left_cropped, target_w, target_h)
                 proc_left = cfg.processed_dir / f"{stem}_L{suffix}"
+                save_jpeg(left_proc, proc_left, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+
+                # Right half -> process
+                right_cropped = crop_to_aspect(right_img, target_w, target_h)
+                right_proc = resize_exact(right_cropped, target_w, target_h)
                 proc_right = cfg.processed_dir / f"{stem}_R{suffix}"
-                save_jpeg(left_img, proc_left, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
-                save_jpeg(right_img, proc_right, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+                save_jpeg(right_proc, proc_right, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+
                 stats.processed_written += 2
 
+                # Create framed outputs (these will be target_size images with
+                # frame baseline applied). Use the cropped halves (not the
+                # resized full-target images) so the framing produces the
+                # expected inner padding and baseline behavior.
                 framed_left, border_left = render_framed_split_half(
-                    left_img,
+                    left_cropped,
                     side="left",
                     target_size=cfg.target_size,
                     baseline=cfg.baseline_frame_width,
@@ -312,7 +375,7 @@ def process_all(
                     allow_upscale=cfg.allow_upscale,
                 )
                 framed_right, border_right = render_framed_split_half(
-                    right_img,
+                    right_cropped,
                     side="right",
                     target_size=cfg.target_size,
                     baseline=cfg.baseline_frame_width,
@@ -339,16 +402,19 @@ def process_all(
                 )
             else:
                 stats.portraits += 1
+                # For portrait/square inputs, center-crop to the framed aspect
+                # ratio first so taller images are trimmed equally top/bottom
+                # (and wider images trimmed left/right) before encoding.
+                target_w, target_h = cfg.target_size
+                cropped = crop_to_aspect(img, target_w, target_h)
+                proc_img = resize_exact(cropped, target_w, target_h)
 
                 proc_out = cfg.processed_dir / f"{stem}{suffix}"
-                if cfg.copy_portraits_without_reencode:
-                    shutil.copy2(src, proc_out)
-                else:
-                    save_jpeg(img, proc_out, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+                save_jpeg(proc_img, proc_out, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
                 stats.processed_written += 1
 
                 framed_img, border = render_framed_full(
-                    img,
+                    cropped,
                     target_size=cfg.target_size,
                     baseline=cfg.baseline_frame_width,
                     frame_color=cfg.frame_color,
@@ -423,6 +489,12 @@ def validate_outputs(
                 f"Framed output is not {cfg.target_size}: {framed_name}, got {img.size}"
             )
 
+    for processed_name in processed_files:
+        with Image.open(cfg.processed_dir / processed_name) as img:
+            assert img.size == cfg.target_size, (
+                f"Processed output is not {cfg.target_size}: {processed_name}, got {img.size}"
+            )
+
     for name, b in framed_borders.items():
         split_baseline = split_frame_baseline(cfg.baseline_frame_width)
         if name.endswith("_L.jpg"):
@@ -469,7 +541,10 @@ def size_diagnostics_lines(
 def run_basic_tests() -> None:
     test_img = Image.new("RGB", (2161, 1440), (10, 20, 30))
     left, right = split_landscape_exact(test_img)
-    assert left.width + right.width == test_img.width
+    # For odd widths we remove the center column so both halves are equal.
+    assert left.width == right.width
+    expected_sum = test_img.width - (1 if test_img.width % 2 == 1 else 0)
+    assert left.width + right.width == expected_sum
     assert left.height == test_img.height
     assert right.height == test_img.height
 
@@ -477,14 +552,12 @@ def run_basic_tests() -> None:
     assert not is_landscape(Image.new("RGB", (1000, 1000), (1, 2, 3)))
     assert classify_source_image(Image.new("RGB", (1000, 1000), (1, 2, 3))) == "portrait_or_square"
     assert classify_source_image(Image.new("RGB", (2000, 1000), (1, 2, 3))) == "landscape_split"
-    assert classify_source_image(Image.new("RGB", (1001, 1000), (1, 2, 3))) == "portrait_or_square"
+    assert classify_source_image(Image.new("RGB", (4000, 2666), (1, 2, 3))) == "landscape_split"
+    assert classify_source_image(Image.new("RGB", (1001, 1000), (1, 2, 3))) == "landscape_split"
     assert classify_source_image(Image.new("RGB", (2001, 1000), (1, 2, 3))) == "landscape_split"
-
-    try:
-        classify_source_image(Image.new("RGB", (1300, 1000), (1, 2, 3)))
-        raise AssertionError("Expected ValueError for unsupported aspect ratio")
-    except ValueError:
-        pass
+    # Square and taller images are treated as portraits
+    assert classify_source_image(Image.new("RGB", (1000, 1000), (1, 2, 3))) == "portrait_or_square"
+    assert classify_source_image(Image.new("RGB", (1000, 1300), (1, 2, 3))) == "portrait_or_square"
 
     framed, border = render_framed_full(
         Image.new("RGB", (960, 960), (50, 60, 70)),
@@ -498,6 +571,18 @@ def run_basic_tests() -> None:
     assert border.right == 60
     assert border.top == 60
     assert border.bottom == 60
+
+    # Symmetric padding with odd gap: a 100x100 image into 111x111 target
+    framed_odd, border_odd = render_framed_full(
+        Image.new("RGB", (100, 100), (50, 60, 70)),
+        target_size=(111, 111),
+        baseline=0,
+        frame_color=(255, 255, 255),
+        allow_upscale=True,
+    )
+    assert framed_odd.size == (111, 111)
+    # gap = 11 -> left = 5, right = 6 (right gets the extra pixel)
+    assert abs(border_odd.right - border_odd.left) <= 1
 
     left_framed, left_border = render_framed_split_half(
         Image.new("RGB", (1080, 1080), (1, 1, 1)),

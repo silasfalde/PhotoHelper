@@ -1,10 +1,10 @@
 # Photo Framer
 
 Photo Framer processes images from any input directory and produces:
-- processed outputs (split landscape images or copied portraits)
+- processed outputs (split landscape images or center-cropped portraits)
 - framed outputs sized for Instagram-style posting
 
-Input directories should contain images that are close to square or close to 2:1 horizontal. Horizontal images are treated as the split case, and square images are treated as the portrait/square case.
+Input directories should contain images that are square, taller, or wider than tall. Horizontal images (width > height) are split in half; square and taller images are center-cropped to match the framed aspect ratio. All processed and framed outputs are resized to the exact target dimensions (e.g., 1080x1440 for 3:4).
 
 The core logic lives in the Python package and is reused by both:
 - a command line script
@@ -30,8 +30,8 @@ You can also run the executable form:
 ./photo_framer_cli.py /path/to/source-images
 
 Default outputs are created next to the source directory:
-- SOURCE_NAME-processed
-- instagram-framed
+- instagram (processed images at exact target size)
+- instagram-framed (framed images at exact target size with baseline)
 
 ## CLI Usage
 
