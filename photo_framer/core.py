@@ -138,18 +138,28 @@ def render_collage_panel(
     foreground: Image.Image,
     panel_size: Tuple[int, int],
     foreground_scale: float,
+    foreground_border_width: int = 0,
+    foreground_border_color: Tuple[int, int, int] = (255, 255, 255),
 ) -> Tuple[Image.Image, BorderSpec]:
     if foreground_scale <= 0:
         raise ValueError("Foreground scale must be positive")
+    if foreground_border_width < 0:
+        raise ValueError("Foreground border width must be non-negative")
 
     panel_w, panel_h = panel_size
     if background_slice.size != (panel_w, panel_h):
         raise ValueError("Background slice does not match panel size")
 
     fg_cropped = crop_to_aspect(foreground, 3, 4)
-    max_w = max(1, int(round(panel_w * foreground_scale)))
-    max_h = max(1, int(round(panel_h * foreground_scale)))
+    max_w = max(1, int(round(panel_w * foreground_scale)) - (2 * foreground_border_width))
+    max_h = max(1, int(round(panel_h * foreground_scale)) - (2 * foreground_border_width))
     fg_resized = resize_to_fit(fg_cropped, max_w, max_h, allow_upscale=False)
+    if foreground_border_width > 0:
+        fg_resized = ImageOps.expand(
+            fg_resized,
+            border=foreground_border_width,
+            fill=foreground_border_color,
+        )
 
     panel = background_slice.copy()
     x = (panel_w - fg_resized.width) // 2
@@ -170,6 +180,8 @@ def build_collage(
     foregrounds: List[Image.Image],
     panel_size: Tuple[int, int],
     foreground_scale: float,
+    foreground_border_width: int = 0,
+    foreground_border_color: Tuple[int, int, int] = (255, 255, 255),
 ) -> Tuple[Image.Image, List[Image.Image], List[BorderSpec]]:
     if not foregrounds:
         raise ValueError("At least one foreground image is required")
@@ -190,6 +202,8 @@ def build_collage(
             foreground,
             panel_size=panel_size,
             foreground_scale=foreground_scale,
+            foreground_border_width=foreground_border_width,
+            foreground_border_color=foreground_border_color,
         )
         master.paste(panel_image, (x0, 0))
         panel_images.append(panel_image)

@@ -16,6 +16,17 @@ from photo_framer.core import (
 )
 
 
+def parse_rgb_color(raw: str) -> tuple[int, int, int]:
+    parts = [part.strip() for part in raw.split(",")]
+    if len(parts) != 3:
+        raise ValueError("Color must be three comma-separated integers like 255,203,5")
+
+    values = tuple(int(part) for part in parts)
+    if any(value < 0 or value > 255 for value in values):
+        raise ValueError("Each color component must be between 0 and 255")
+    return values
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Create Instagram-ready photo collages from one background and ordered foreground images.",
@@ -43,6 +54,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.82,
         help="Scale factor for foreground images inside each panel.",
+    )
+    parser.add_argument(
+        "--foreground-border-width",
+        type=int,
+        default=0,
+        help="Optional border width to add around each foreground image. Set to 0 to disable.",
+    )
+    parser.add_argument(
+        "--foreground-border-color",
+        default="255,255,255",
+        help="Border color as R,G,B (default: 255,255,255).",
     )
     parser.add_argument("--jpeg-quality", type=int, default=100)
     parser.add_argument("--jpeg-subsampling", type=int, default=0)
@@ -77,6 +99,13 @@ def main() -> int:
         parser.error("--panel-width and --panel-height must be positive")
     if args.foreground_scale <= 0:
         parser.error("--foreground-scale must be positive")
+    if args.foreground_border_width < 0:
+        parser.error("--foreground-border-width must be non-negative")
+
+    try:
+        foreground_border_color = parse_rgb_color(args.foreground_border_color)
+    except ValueError as exc:
+        parser.error(str(exc))
 
     if args.run_tests:
         run_collage_tests()
@@ -96,6 +125,8 @@ def main() -> int:
         foreground_images,
         panel_size=panel_size,
         foreground_scale=args.foreground_scale,
+        foreground_border_width=args.foreground_border_width,
+        foreground_border_color=foreground_border_color,
     )
 
     output_dir.mkdir(parents=True, exist_ok=True)

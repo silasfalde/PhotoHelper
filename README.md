@@ -77,6 +77,8 @@ Common options:
 - --panel-width INT (default 1080)
 - --panel-height INT (default 1440)
 - --foreground-scale FLOAT (default 0.82)
+- --foreground-border-width INT (default 0)
+- --foreground-border-color R,G,B (default 255,255,255)
 - --jpeg-quality INT
 - --jpeg-subsampling INT
 - --validate
@@ -90,6 +92,10 @@ python photo_collage_cli.py ./background.jpg ./one.jpg ./two.jpg ./three.jpg --v
 Example using the included test images:
 
 python photo_collage_cli.py ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --validate
+
+Example with maize foreground borders:
+
+python photo_collage_cli.py ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --foreground-border-width 18 --foreground-border-color 255,203,5 --validate
 
 The tool crops the background to an aspect ratio of roughly N:4, where N is the number of foreground images, then slices it into N vertical 1080x1440 panels. Each foreground is center-cropped to 3:4, scaled down slightly, and centered in its panel so some background remains visible.
 
