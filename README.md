@@ -4,6 +4,8 @@ Photo Framer processes images from any input directory and produces:
 - processed outputs (split landscape images or center-cropped portraits)
 - framed outputs sized for Instagram-style posting
 
+There is also a collage CLI for turning one horizontal background image plus an ordered set of foreground images into Instagram-ready 1080x1440 panels.
+
 Input directories should contain images that are square, taller, or wider than tall. Horizontal images (width > height) are split in half; square and taller images are center-cropped to match the framed aspect ratio. All processed and framed outputs are resized to the exact target dimensions (e.g., 1080x1440 for 3:4).
 
 The core logic lives in the Python package and is reused by both:
@@ -60,6 +62,41 @@ python photo_framer_cli.py ./instagram --processed-dir ./instagram-processed --f
 
 By default, framed outputs are square. Use `--framed-aspect-ratio 4:3` for landscape or `--framed-aspect-ratio 3:4` for portrait framing.
 
+## Collage CLI
+
+Create a master collage and per-panel outputs from one background image and one or more foreground images.
+
+Basic form:
+
+python photo_collage_cli.py BACKGROUND FOREGROUND [FOREGROUND ...] [options]
+
+The foreground images are placed left-to-right in the order you pass them.
+
+Common options:
+- --output-dir PATH
+- --panel-width INT (default 1080)
+- --panel-height INT (default 1440)
+- --foreground-scale FLOAT (default 0.82)
+- --jpeg-quality INT
+- --jpeg-subsampling INT
+- --validate
+- --run-tests
+- --quiet
+
+Example:
+
+python photo_collage_cli.py ./background.jpg ./one.jpg ./two.jpg ./three.jpg --validate
+
+Example using the included test images:
+
+python photo_collage_cli.py ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --validate
+
+The tool crops the background to an aspect ratio of roughly N:4, where N is the number of foreground images, then slices it into N vertical 1080x1440 panels. Each foreground is center-cropped to 3:4, scaled down slightly, and centered in its panel so some background remains visible.
+
+Outputs are written to a folder next to the background image by default, using:
+- master.jpg for the full-width collage
+- panel_01.jpg, panel_02.jpg, and so on for the individual 1080x1440 panel images
+
 ## Notebook Usage
 
 Open and run [photo_framer.ipynb](photo_framer.ipynb).
@@ -93,5 +130,6 @@ Use --extensions to customize accepted suffixes.
 
 - [photo_framer/core.py](photo_framer/core.py): shared processing logic
 - [photo_framer_cli.py](photo_framer_cli.py): command line entrypoint
+- [photo_collage_cli.py](photo_collage_cli.py): collage command line entrypoint
 - [photo_framer.ipynb](photo_framer.ipynb): interactive workflow and preview
 - [requirements.txt](requirements.txt): dependencies
