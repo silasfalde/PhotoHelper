@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Tuple
 
-from photo_framer.core import (
+from photo_helper import (
     AppConfig,
     process_all,
     run_basic_tests,

@@ -8,7 +8,7 @@ import logging
 import sys
 from pathlib import Path
 
-from photo_framer.raw_finder import (
+from photo_helper import (
     copy_matched_raws,
     find_jpg_files,
     summarize_results,

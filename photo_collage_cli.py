@@ -5,7 +5,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from photo_framer.core import (
+from photo_helper import (
     build_collage,
     compute_collage_canvas_size,
     load_image,

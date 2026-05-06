@@ -60,6 +60,9 @@ Example with explicit output folders:
 
 python photo_framer_cli.py ./instagram --processed-dir ./instagram-processed --framed-dir ./instagram-framed --validate
 
+Example flags for maize borders: 
+--foreground-border-width 13 --foreground-border-color 255,203,5
+
 By default, framed outputs are square. Use `--framed-aspect-ratio 4:3` for landscape or `--framed-aspect-ratio 3:4` for portrait framing.
 
 ## Collage CLI
