@@ -1,96 +1,84 @@
-"""Top-level PhotoHelper package.
-
-This package provides a lightweight, forward-facing API that groups the
-project's capabilities (framing, collage, raw-finding) under a single
-`photo_helper` namespace while delegating implementation to the existing
-`photo_framer` modules for backward compatibility.
-"""
+"""Top-level PhotoHelper package."""
 
 from ._version import __version__
-
-# Re-export framing/collage core
-from photo_framer.core import (  # noqa: F401
+from .collage import build_collage, compute_collage_canvas_size, render_collage_panel, run_collage_tests, validate_collage_outputs
+from .common import (
     AppConfig,
+    BorderSpec,
     CollageConfig,
     CollageRecord,
     CollageStats,
-    BorderSpec,
     ProcessRecord,
     RunStats,
     bytes_to_kb,
-    build_collage,
-    compute_collage_canvas_size,
+    classify_source_image,
+    crop_to_aspect,
+    ensure_collage_output_dir,
+    ensure_output_dirs,
     fit_inside,
+    is_four_thirds,
     is_landscape,
+    is_portrait_or_square,
+    is_three_fourths,
     list_source_images,
     load_image,
     load_image_and_metadata,
-    process_all,
-    render_collage_panel,
-    render_framed_full,
-    render_framed_split_half,
-    run_collage_tests,
-    run_basic_tests,
+    resize_exact,
+    resize_to_fit,
     save_collage_output,
     save_jpeg,
-    size_diagnostics_lines,
+    split_frame_baseline,
     split_landscape_exact,
-    summarize_source_images,
-    validate_collage_outputs,
-    validate_outputs,
 )
-
-# Re-export raw finder
-from photo_framer.raw_finder import (  # noqa: F401
-    copy_matched_raws,
-    ensure_file_downloaded,
-    extract_base_name,
-    find_all_raw_files,
-    find_jpg_files,
-    is_file_offloaded,
-    match_raw_to_jpg,
-    summarize_results,
-)
+from .framing import process_all, render_framed_full, render_framed_split_half, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
+from .raw import copy_matched_raws, ensure_file_downloaded, extract_base_name, find_all_raw_files, find_jpg_files, is_file_offloaded, match_raw_to_jpg, summarize_results
 
 __all__ = [
-    # version
     "__version__",
-    # framing/collage
     "AppConfig",
+    "BorderSpec",
     "CollageConfig",
     "CollageRecord",
     "CollageStats",
-    "BorderSpec",
     "ProcessRecord",
     "RunStats",
-    "bytes_to_kb",
     "build_collage",
+    "bytes_to_kb",
+    "classify_source_image",
     "compute_collage_canvas_size",
+    "copy_matched_raws",
+    "crop_to_aspect",
+    "ensure_collage_output_dir",
+    "ensure_file_downloaded",
+    "ensure_output_dirs",
+    "extract_base_name",
     "fit_inside",
+    "find_all_raw_files",
+    "find_jpg_files",
+    "is_four_thirds",
+    "is_file_offloaded",
     "is_landscape",
+    "is_portrait_or_square",
+    "is_three_fourths",
     "list_source_images",
     "load_image",
     "load_image_and_metadata",
+    "match_raw_to_jpg",
     "process_all",
     "render_collage_panel",
     "render_framed_full",
     "render_framed_split_half",
-    "run_collage_tests",
+    "resize_exact",
+    "resize_to_fit",
     "run_basic_tests",
+    "run_collage_tests",
     "save_collage_output",
     "save_jpeg",
     "size_diagnostics_lines",
+    "split_frame_baseline",
     "split_landscape_exact",
+    "summarize_results",
     "summarize_source_images",
     "validate_collage_outputs",
     "validate_outputs",
-    # raw finder
-    "copy_matched_raws",
-    "ensure_file_downloaded",
-    "extract_base_name",
-    "find_all_raw_files",
-    "find_jpg_files",
-    "is_file_offloaded",
-    "match_raw_to_jpg",
-    "summarize_results",
 ]

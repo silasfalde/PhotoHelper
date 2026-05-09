@@ -1,10 +1,12 @@
-# Photo Framer
+# Photo Helper
 
-Photo Framer processes images from any input directory and produces:
+Photo Helper processes images from any input directory and produces:
 - processed outputs (split landscape images or center-cropped portraits)
 - framed outputs sized for Instagram-style posting
+- collage outputs from a background image and ordered foreground images
+- raw-photo copies matched to JPG names
 
-There is also a collage CLI for turning one horizontal background image plus an ordered set of foreground images into Instagram-ready 1080x1440 panels.
+The implementation now lives in the `photo_helper` package, with compatibility wrappers preserved under `photo_framer` for older notebook imports and scripts.
 
 Input directories should contain images that are square, taller, or wider than tall. Horizontal images (width > height) are split in half; square and taller images are center-cropped to match the framed aspect ratio. All processed and framed outputs are resized to the exact target dimensions (e.g., 1080x1440 for 3:4).
 
@@ -117,7 +119,7 @@ Suggested order:
 4. Run Cell 13 (basic tests, optional)
 5. Run Cells 15 and 16 (processing, validation, diagnostics, preview)
 
-The notebook imports shared logic from [photo_framer/core.py](photo_framer/core.py), so notebook and CLI behavior stay aligned.
+The notebook imports shared logic from the compatibility wrapper [photo_framer/core.py](photo_framer/core.py), which forwards to the new `photo_helper` submodules so notebook and CLI behavior stay aligned.
 
 ## Supported Files
 
@@ -137,8 +139,13 @@ Use --extensions to customize accepted suffixes.
 
 ## Project Structure
 
-- [photo_framer/core.py](photo_framer/core.py): shared processing logic
-- [photo_framer_cli.py](photo_framer_cli.py): command line entrypoint
+- [photo_helper/common.py](photo_helper/common.py): shared dataclasses and image/file helpers
+- [photo_helper/framing.py](photo_helper/framing.py): framing and processing pipeline
+- [photo_helper/collage.py](photo_helper/collage.py): collage rendering and validation
+- [photo_helper/raw.py](photo_helper/raw.py): raw-photo finder and copier
+- [photo_framer/core.py](photo_framer/core.py): legacy compatibility wrapper
+- [photo_framer_cli.py](photo_framer_cli.py): framing command line entrypoint
 - [photo_collage_cli.py](photo_collage_cli.py): collage command line entrypoint
+- [find_raw_photos_cli.py](find_raw_photos_cli.py): raw-photo command line entrypoint
 - [photo_framer.ipynb](photo_framer.ipynb): interactive workflow and preview
 - [requirements.txt](requirements.txt): dependencies
