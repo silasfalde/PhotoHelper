@@ -32,6 +32,7 @@ from .common import (
 )
 from .framing import process_all, render_framed_full, render_framed_split_half, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
 from .raw import copy_matched_raws, ensure_file_downloaded, extract_base_name, find_all_raw_files, find_jpg_files, is_file_offloaded, match_raw_to_jpg, summarize_results
+from .panorama import list_images_sorted, stitch_images_from_paths, save_tiff
 
 __all__ = [
     "__version__",
@@ -81,4 +82,7 @@ __all__ = [
     "summarize_source_images",
     "validate_collage_outputs",
     "validate_outputs",
+    "list_images_sorted",
+    "stitch_images_from_paths",
+    "save_tiff",
 ]

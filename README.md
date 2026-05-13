@@ -108,6 +108,26 @@ Outputs are written to a folder next to the background image by default, using:
 - master.jpg for the full-width collage
 - panel_01.jpg, panel_02.jpg, and so on for the individual 1080x1440 panel images
 
+## Panorama CLI
+
+Create a single center-focused rectangular panorama from an ordered sequence of images (NEF or common formats) in a directory. Images are ordered using natural numeric sorting (so DSC_2 comes before DSC_10).
+
+Basic usage:
+
+python photo_panorama_cli.py /path/to/source-nefs --output-dir ./panorama-out --output-name panorama.tiff
+
+Options:
+- `--output-dir PATH` : Directory to write the panorama (default: current working directory).
+- `--output-name NAME` : Output filename (default: `panorama.tiff`).
+- `--max-width INT` / `--max-height INT` : Optionally downscale inputs for memory/CPU savings.
+- `--quiet` : Suppress progress logs.
+
+Notes and limitations:
+- The CLI reads Nikon NEF files via `rawpy` and stitches using OpenCV feature matching. By default the output is a 16-bit TIFF (`.tiff`) to preserve pixel detail. Writing a native Nikon NEF is not supported by this tool; producing a DNG or NEF would require external/proprietary converters or SDKs.
+- Stitching full-resolution NEF files can use a lot of memory and CPU. Use `--max-width`/`--max-height` to limit resource use if needed.
+- The stitcher centers the panorama on the middle image, aligns images pairwise, blends seams using a simple feathering approach, and crops to a rectangular region that preserves as many input pixels as possible.
+
+
 ## Notebook Usage
 
 Open and run [photo_framer.ipynb](photo_framer.ipynb).
