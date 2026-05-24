@@ -52,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--foreground-scale",
         type=float,
-        default=0.82,
+        default=0.78,
         help="Scale factor for foreground images inside each panel.",
     )
     parser.add_argument(

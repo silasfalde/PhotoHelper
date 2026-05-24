@@ -81,7 +81,7 @@ Common options:
 - --output-dir PATH
 - --panel-width INT (default 1080)
 - --panel-height INT (default 1440)
-- --foreground-scale FLOAT (default 0.82)
+- --foreground-scale FLOAT (default 0.78)
 - --foreground-border-width INT (default 0)
 - --foreground-border-color R,G,B (default 255,255,255)
 - --jpeg-quality INT
@@ -92,7 +92,7 @@ Common options:
 
 Example:
 
-python photo_collage_cli.py ./background.jpg ./one.jpg ./two.jpg ./three.jpg --validate
+python photo_collage_cli.py --foreground-border-color 255,255,255 --foreground-border-width 40 ...
 
 Example using the included test images:
 
