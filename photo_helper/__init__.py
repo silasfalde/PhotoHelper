@@ -29,8 +29,9 @@ from .common import (
     save_jpeg,
     split_frame_baseline,
     split_landscape_exact,
+    split_landscape_into_three,
 )
-from .framing import process_all, render_framed_full, render_framed_split_half, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
+from .framing_runtime import process_all, render_framed_full, render_framed_split_half, render_framed_split_third, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
 from .raw import copy_matched_raws, ensure_file_downloaded, extract_base_name, find_all_raw_files, find_jpg_files, is_file_offloaded, match_raw_to_jpg, summarize_results
 from .panorama import list_images_sorted, stitch_images_from_paths, save_tiff
 
@@ -78,6 +79,7 @@ __all__ = [
     "size_diagnostics_lines",
     "split_frame_baseline",
     "split_landscape_exact",
+    "split_landscape_into_three",
     "summarize_results",
     "summarize_source_images",
     "validate_collage_outputs",
@@ -85,4 +87,5 @@ __all__ = [
     "list_images_sorted",
     "stitch_images_from_paths",
     "save_tiff",
+    "render_framed_split_third",
 ]

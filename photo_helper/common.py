@@ -154,6 +154,21 @@ def split_landscape_exact(img: Image.Image) -> Tuple[Image.Image, Image.Image]:
     return left, right
 
 
+def split_landscape_into_three(img: Image.Image) -> Tuple[Image.Image, Image.Image, Image.Image]:
+    w, h = img.size
+    base_width, remainder = divmod(w, 3)
+    widths = [base_width + (1 if idx < remainder else 0) for idx in range(3)]
+
+    crops = []
+    left = 0
+    for width in widths:
+        right = left + width
+        crops.append(img.crop((left, 0, right, h)))
+        left = right
+
+    return crops[0], crops[1], crops[2]
+
+
 def fit_inside(
     width: int,
     height: int,
@@ -211,9 +226,11 @@ def is_three_fourths(img: Image.Image) -> bool:
 
 
 def classify_source_image(img: Image.Image) -> str:
-    if img.width > img.height:
-        return "landscape_split"
-    return "portrait_or_square"
+    if img.width <= img.height:
+        return "portrait_or_square"
+    if is_landscape(img):
+        return "landscape_triplet"
+    return "landscape_pair"
 
 
 def bytes_to_kb(path: Path) -> float:

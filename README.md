@@ -8,7 +8,7 @@ Photo Helper processes images from any input directory and produces:
 
 The implementation now lives in the `photo_helper` package, with compatibility wrappers preserved under `photo_framer` for older notebook imports and scripts.
 
-Input directories should contain images that are square, taller, or wider than tall. Horizontal images (width > height) are split in half; square and taller images are center-cropped to match the framed aspect ratio. All processed and framed outputs are resized to the exact target dimensions (e.g., 1080x1440 for 3:4).
+Input directories should contain images that are square, taller, or moderately wide. Standard landscape images are split into two contiguous panels, while images that are approximately 2:1 are split into three contiguous panels. All processed and framed outputs are resized to the exact target dimensions (e.g., 1080x1440 for 3:4).
 
 The core logic lives in the Python package and is reused by both:
 - a command line script
@@ -47,7 +47,7 @@ Common options:
 - --processed-dir PATH
 - --framed-dir PATH
 - --target-width INT (default 1080)
-- --framed-aspect-ratio 1:1|4:3|3:4 (default 1:1)
+- --framed-aspect-ratio 1:1|4:3|3:4 (default 1:1, 3:4 is vertical)
 - --target-height INT (optional explicit override)
 - --baseline-frame-width INT (default 60)
 - --frame-color R,G,B (default 255,255,255)

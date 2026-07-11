@@ -22,6 +22,7 @@ from .common import (
     save_jpeg,
     split_frame_baseline,
     split_landscape_exact,
+    split_landscape_into_three,
 )
 
 
@@ -94,6 +95,58 @@ def render_framed_split_half(
     return out, border
 
 
+def render_framed_split_third(
+    img: Image.Image,
+    position: str,
+    target_size: Tuple[int, int],
+    baseline: int,
+    frame_color: Tuple[int, int, int],
+    allow_upscale: bool,
+) -> Tuple[Image.Image, BorderSpec]:
+    if position not in {"left", "middle", "right"}:
+        raise ValueError("position must be 'left', 'middle', or 'right'")
+
+    target_w, target_h = target_size
+    split_baseline = split_frame_baseline(baseline)
+    avail_h = target_h - (2 * baseline)
+    if position == "middle":
+        avail_w = target_w
+    else:
+        avail_w = target_w - split_baseline
+    if avail_w <= 0 or avail_h <= 0:
+        raise ValueError("Baseline frame width is too large for target size")
+
+    if position == "middle":
+        resized = resize_exact(crop_to_aspect(img, target_w, avail_h), target_w, avail_h)
+    else:
+        resized = resize_to_fit(img, avail_w, avail_h, allow_upscale)
+    new_w, new_h = resized.size
+
+    out = Image.new("RGB", (target_w, target_h), frame_color)
+    gap_y = avail_h - new_h
+    y = baseline + (gap_y // 2)
+
+    if position == "left":
+        x = target_w - new_w
+        out.paste(resized, (x, y))
+        border = BorderSpec(left=x, top=y, right=0, bottom=target_h - (y + new_h))
+    elif position == "middle":
+        x = 0
+        out.paste(resized, (x, y))
+        border = BorderSpec(
+            left=0,
+            top=y,
+            right=0,
+            bottom=target_h - (y + new_h),
+        )
+    else:
+        x = 0
+        out.paste(resized, (x, y))
+        border = BorderSpec(left=0, top=y, right=target_w - new_w, bottom=target_h - (y + new_h))
+
+    return out, border
+
+
 def summarize_source_images(cfg: AppConfig) -> Tuple[int, int, int]:
     source_files = list_source_images(cfg)
     landscapes = 0
@@ -101,7 +154,7 @@ def summarize_source_images(cfg: AppConfig) -> Tuple[int, int, int]:
     for path in source_files:
         img = load_image(path)
         mode = classify_source_image(img)
-        if mode == "landscape_split":
+        if mode.startswith("landscape_"):
             landscapes += 1
         else:
             portraits += 1
@@ -129,7 +182,74 @@ def process_all(
 
             mode = classify_source_image(img)
 
-            if mode == "landscape_split":
+            if mode == "landscape_triplet":
+                stats.landscapes += 1
+                left_img, middle_img, right_img = split_landscape_into_three(img)
+                target_w, target_h = cfg.target_size
+
+                left_cropped = crop_to_aspect(left_img, target_w, target_h)
+                left_proc = resize_exact(left_cropped, target_w, target_h)
+                proc_left = cfg.processed_dir / f"{stem}_01{suffix}"
+                save_jpeg(left_proc, proc_left, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+
+                middle_cropped = crop_to_aspect(middle_img, target_w, target_h)
+                middle_proc = resize_exact(middle_cropped, target_w, target_h)
+                proc_middle = cfg.processed_dir / f"{stem}_02{suffix}"
+                save_jpeg(middle_proc, proc_middle, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+
+                right_cropped = crop_to_aspect(right_img, target_w, target_h)
+                right_proc = resize_exact(right_cropped, target_w, target_h)
+                proc_right = cfg.processed_dir / f"{stem}_03{suffix}"
+                save_jpeg(right_proc, proc_right, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+
+                stats.processed_written += 3
+
+                framed_left, border_left = render_framed_split_third(
+                    left_cropped,
+                    position="left",
+                    target_size=cfg.target_size,
+                    baseline=cfg.baseline_frame_width,
+                    frame_color=cfg.frame_color,
+                    allow_upscale=cfg.allow_upscale,
+                )
+                framed_middle, border_middle = render_framed_split_third(
+                    middle_cropped,
+                    position="middle",
+                    target_size=cfg.target_size,
+                    baseline=cfg.baseline_frame_width,
+                    frame_color=cfg.frame_color,
+                    allow_upscale=cfg.allow_upscale,
+                )
+                framed_right, border_right = render_framed_split_third(
+                    right_cropped,
+                    position="right",
+                    target_size=cfg.target_size,
+                    baseline=cfg.baseline_frame_width,
+                    frame_color=cfg.frame_color,
+                    allow_upscale=cfg.allow_upscale,
+                )
+
+                fr_left = cfg.framed_dir / f"{stem}_01{suffix}"
+                fr_middle = cfg.framed_dir / f"{stem}_02{suffix}"
+                fr_right = cfg.framed_dir / f"{stem}_03{suffix}"
+                save_jpeg(framed_left, fr_left, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+                save_jpeg(framed_middle, fr_middle, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+                save_jpeg(framed_right, fr_right, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+                stats.framed_written += 3
+
+                framed_borders[fr_left.name] = border_left
+                framed_borders[fr_middle.name] = border_middle
+                framed_borders[fr_right.name] = border_right
+
+                records.append(
+                    ProcessRecord(
+                        source_name=src.name,
+                        mode="landscape_triplet",
+                        processed_outputs=[proc_left.name, proc_middle.name, proc_right.name],
+                        framed_outputs=[fr_left.name, fr_middle.name, fr_right.name],
+                    )
+                )
+            elif mode == "landscape_pair":
                 stats.landscapes += 1
                 left_img, right_img = split_landscape_exact(img)
                 target_w, target_h = cfg.target_size
@@ -175,7 +295,7 @@ def process_all(
                 records.append(
                     ProcessRecord(
                         source_name=src.name,
-                        mode="landscape_split",
+                        mode="landscape_pair",
                         processed_outputs=[proc_left.name, proc_right.name],
                         framed_outputs=[fr_left.name, fr_right.name],
                     )
@@ -235,12 +355,15 @@ def validate_outputs(cfg: AppConfig, framed_borders: Dict[str, BorderSpec]) -> N
     for path in src_files:
         img = load_image(path)
         mode = classify_source_image(img)
-        (landscapes if mode == "landscape_split" else portraits).append(path)
+        (landscapes if mode.startswith("landscape_") else portraits).append(path)
 
     processed_files = sorted([p.name for p in cfg.processed_dir.glob("*.jpg")])
     framed_files = sorted([p.name for p in cfg.framed_dir.glob("*.jpg")])
 
-    expected = len(portraits) + 2 * len(landscapes)
+    expected = len(portraits)
+    for path in landscapes:
+        mode = classify_source_image(load_image(path))
+        expected += 3 if mode == "landscape_triplet" else 2
     assert len(processed_files) == expected, (
         f"Processed count mismatch: expected {expected}, got {len(processed_files)}"
     )
@@ -250,10 +373,19 @@ def validate_outputs(cfg: AppConfig, framed_borders: Dict[str, BorderSpec]) -> N
 
     for path in landscapes:
         assert path.name not in processed_files, f"Landscape original found in processed output: {path.name}"
-        assert f"{path.stem}_L.jpg" in processed_files
-        assert f"{path.stem}_R.jpg" in processed_files
-        assert f"{path.stem}_L.jpg" in framed_files
-        assert f"{path.stem}_R.jpg" in framed_files
+        mode = classify_source_image(load_image(path))
+        if mode == "landscape_triplet":
+            assert f"{path.stem}_01.jpg" in processed_files
+            assert f"{path.stem}_02.jpg" in processed_files
+            assert f"{path.stem}_03.jpg" in processed_files
+            assert f"{path.stem}_01.jpg" in framed_files
+            assert f"{path.stem}_02.jpg" in framed_files
+            assert f"{path.stem}_03.jpg" in framed_files
+        else:
+            assert f"{path.stem}_L.jpg" in processed_files
+            assert f"{path.stem}_R.jpg" in processed_files
+            assert f"{path.stem}_L.jpg" in framed_files
+            assert f"{path.stem}_R.jpg" in framed_files
 
     for framed_name in framed_files:
         with Image.open(cfg.framed_dir / framed_name) as img:
@@ -275,6 +407,21 @@ def validate_outputs(cfg: AppConfig, framed_borders: Dict[str, BorderSpec]) -> N
             assert border.top >= cfg.baseline_frame_width
             assert border.bottom >= cfg.baseline_frame_width
         elif name.endswith("_R.jpg"):
+            assert border.left == 0, f"Right split must have zero left border: {name}"
+            assert border.right >= split_baseline, f"Right split outer border below baseline: {name}, right={border.right}"
+            assert border.top >= cfg.baseline_frame_width
+            assert border.bottom >= cfg.baseline_frame_width
+        elif name.endswith("_01.jpg"):
+            assert border.right == 0, f"Left split must have zero right border: {name}"
+            assert border.left >= split_baseline, f"Left split outer border below baseline: {name}, left={border.left}"
+            assert border.top >= cfg.baseline_frame_width
+            assert border.bottom >= cfg.baseline_frame_width
+        elif name.endswith("_02.jpg"):
+            assert border.left == 0, f"Middle split must have zero left border: {name}, left={border.left}"
+            assert border.right == 0, f"Middle split must have zero right border: {name}, right={border.right}"
+            assert border.top >= cfg.baseline_frame_width
+            assert border.bottom >= cfg.baseline_frame_width
+        elif name.endswith("_03.jpg"):
             assert border.left == 0, f"Right split must have zero left border: {name}"
             assert border.right >= split_baseline, f"Right split outer border below baseline: {name}, right={border.right}"
             assert border.top >= cfg.baseline_frame_width
@@ -311,13 +458,17 @@ def run_basic_tests() -> None:
     assert left.height == test_img.height
     assert right.height == test_img.height
 
+    first, middle, third = split_landscape_into_three(Image.new("RGB", (2161, 1440), (10, 20, 30)))
+    assert first.height == middle.height == third.height == 1440
+    assert first.width + middle.width + third.width == 2161
+
     assert is_landscape(Image.new("RGB", (2000, 1000), (1, 2, 3)))
     assert not is_landscape(Image.new("RGB", (1000, 1000), (1, 2, 3)))
     assert classify_source_image(Image.new("RGB", (1000, 1000), (1, 2, 3))) == "portrait_or_square"
-    assert classify_source_image(Image.new("RGB", (2000, 1000), (1, 2, 3))) == "landscape_split"
-    assert classify_source_image(Image.new("RGB", (4000, 2666), (1, 2, 3))) == "landscape_split"
-    assert classify_source_image(Image.new("RGB", (1001, 1000), (1, 2, 3))) == "landscape_split"
-    assert classify_source_image(Image.new("RGB", (2001, 1000), (1, 2, 3))) == "landscape_split"
+    assert classify_source_image(Image.new("RGB", (1960, 1000), (1, 2, 3))) == "landscape_triplet"
+    assert classify_source_image(Image.new("RGB", (2000, 1000), (1, 2, 3))) == "landscape_triplet"
+    assert classify_source_image(Image.new("RGB", (4000, 2000), (1, 2, 3))) == "landscape_triplet"
+    assert classify_source_image(Image.new("RGB", (2400, 1400), (1, 2, 3))) == "landscape_pair"
     assert classify_source_image(Image.new("RGB", (1000, 1000), (1, 2, 3))) == "portrait_or_square"
     assert classify_source_image(Image.new("RGB", (1000, 1300), (1, 2, 3))) == "portrait_or_square"
 
@@ -344,38 +495,51 @@ def run_basic_tests() -> None:
     assert framed_odd.size == (111, 111)
     assert abs(border_odd.right - border_odd.left) <= 1
 
-    left_framed, left_border = render_framed_split_half(
+    left_framed, left_border = render_framed_split_third(
         Image.new("RGB", (1080, 1080), (1, 1, 1)),
-        side="left",
+        position="left",
         target_size=(1080, 1080),
         baseline=40,
         frame_color=(255, 255, 255),
         allow_upscale=False,
     )
-    right_framed, right_border = render_framed_split_half(
+    middle_framed, middle_border = render_framed_split_third(
         Image.new("RGB", (1080, 1080), (1, 1, 1)),
-        side="right",
+        position="middle",
+        target_size=(1080, 1080),
+        baseline=40,
+        frame_color=(255, 255, 255),
+        allow_upscale=False,
+    )
+    right_framed, right_border = render_framed_split_third(
+        Image.new("RGB", (1080, 1080), (1, 1, 1)),
+        position="right",
         target_size=(1080, 1080),
         baseline=40,
         frame_color=(255, 255, 255),
         allow_upscale=False,
     )
     assert left_framed.size == (1080, 1080)
+    assert middle_framed.size == (1080, 1080)
     assert right_framed.size == (1080, 1080)
     split_baseline = split_frame_baseline(40)
     assert left_border.right == 0
     assert left_border.left == 80
     assert left_border.top == 40
     assert left_border.bottom == 40
+    assert middle_border.left >= split_baseline
+    assert middle_border.right >= split_baseline
+    assert middle_border.top == 40
+    assert middle_border.bottom == 40
     assert right_border.left == 0
     assert right_border.right == 80
     assert right_border.top == 40
     assert right_border.bottom == 40
 
     try:
-        render_framed_split_half(
+        render_framed_split_third(
             Image.new("RGB", (1080, 1080), (1, 1, 1)),
-            side="bad",
+            position="bad",
             target_size=(1080, 1080),
             baseline=40,
             frame_color=(255, 255, 255),
