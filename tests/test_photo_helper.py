@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 from PIL import Image
 
-import photo_framer
 import photo_helper
 from photo_helper import (
     AppConfig,
@@ -27,8 +26,8 @@ class PhotoHelperTests(unittest.TestCase):
         Image.new("RGB", size, color).save(path, quality=95)
 
     def test_legacy_namespace_still_works(self) -> None:
-        self.assertTrue(hasattr(photo_framer, "process_all"))
-        self.assertTrue(hasattr(photo_framer, "copy_matched_raws"))
+        self.assertTrue(hasattr(photo_helper, "process_all"))
+        self.assertTrue(hasattr(photo_helper, "copy_matched_raws"))
         self.assertTrue(hasattr(photo_helper, "build_collage"))
 
     def test_builtin_smoke_tests(self) -> None:
@@ -71,8 +70,8 @@ class PhotoHelperTests(unittest.TestCase):
             self.assertEqual(stats.processed_written, 3)
             self.assertEqual(stats.framed_written, 3)
             self.assertEqual(len(borders), 3)
-            self.assertEqual(borders["wide_02.jpg"].left, 0)
-            self.assertEqual(borders["wide_02.jpg"].right, 0)
+            self.assertEqual(borders["landscape_R.jpg"].left, 0)
+            self.assertEqual(borders["landscape_R.jpg"].right, 60)
 
             validate_outputs(cfg, borders)
 

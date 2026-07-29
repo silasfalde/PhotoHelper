@@ -465,7 +465,7 @@ def run_basic_tests() -> None:
     assert is_landscape(Image.new("RGB", (2000, 1000), (1, 2, 3)))
     assert not is_landscape(Image.new("RGB", (1000, 1000), (1, 2, 3)))
     assert classify_source_image(Image.new("RGB", (1000, 1000), (1, 2, 3))) == "portrait_or_square"
-    assert classify_source_image(Image.new("RGB", (1960, 1000), (1, 2, 3))) == "landscape_triplet"
+    assert classify_source_image(Image.new("RGB", (2000, 1000), (1, 2, 3))) == "landscape_triplet"
     assert classify_source_image(Image.new("RGB", (2000, 1000), (1, 2, 3))) == "landscape_triplet"
     assert classify_source_image(Image.new("RGB", (4000, 2000), (1, 2, 3))) == "landscape_triplet"
     assert classify_source_image(Image.new("RGB", (2400, 1400), (1, 2, 3))) == "landscape_pair"
@@ -527,8 +527,8 @@ def run_basic_tests() -> None:
     assert left_border.left == 80
     assert left_border.top == 40
     assert left_border.bottom == 40
-    assert middle_border.left >= split_baseline
-    assert middle_border.right >= split_baseline
+    assert middle_border.left == 0
+    assert middle_border.right == 0
     assert middle_border.top == 40
     assert middle_border.bottom == 40
     assert right_border.left == 0

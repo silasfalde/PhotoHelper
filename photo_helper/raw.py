@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import logging
 import os
 import shutil
 import subprocess
 import time
 from pathlib import Path
-from typing import Optional
-
-
-logger = logging.getLogger(__name__)
+from typing import Callable, Optional
 
 
 def find_jpg_files(jpg_dir: Path) -> list[Path]:
@@ -79,8 +75,7 @@ def is_file_offloaded(file_path: Path) -> bool:
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
             pass
         return False
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Error checking offload status for %s: %s", file_path, exc)
+    except Exception:
         return False
 
 
@@ -120,6 +115,8 @@ def copy_matched_raws(
     raw_source: Path,
     output_dir: Path,
     verbose: bool = False,
+    timeout_seconds: int = 30,
+    status_callback: Optional[Callable[[str], None]] = None,
 ) -> dict[str, int]:
     jpg_dir = jpg_dir.resolve()
     raw_source = raw_source.resolve()
@@ -135,9 +132,9 @@ def copy_matched_raws(
     jpg_files = find_jpg_files(jpg_dir)
     raw_files = find_all_raw_files(raw_source)
 
-    if verbose:
-        logger.info("Found %s JPG files in %s", len(jpg_files), jpg_dir)
-        logger.info("Found %s NEF files in %s", len(raw_files), raw_source)
+    def emit(message: str) -> None:
+        if verbose and status_callback is not None:
+            status_callback(message)
 
     stats = {
         "matched": 0,
@@ -153,36 +150,32 @@ def copy_matched_raws(
         matched_raw = match_raw_to_jpg(jpg_file.name, raw_files)
 
         if matched_raw is None:
-            if verbose:
-                logger.warning("No matching NEF found for %s", jpg_file.name)
+            emit(f"No matching NEF found for {jpg_file.name}")
             stats["missing"] += 1
             continue
 
         stats["matched"] += 1
         nef_key = matched_raw.name.lower()
         if nef_key in copied_nebs:
-            if verbose:
-                logger.info("Skipping %s: already copied matching NEF %s", jpg_file.name, matched_raw.name)
+            emit(f"Skipping {jpg_file.name}: already copied matching NEF {matched_raw.name}")
             stats["duplicate"] += 1
             continue
 
-        if verbose:
-            logger.info("Checking if %s is downloaded...", matched_raw.name)
+        emit(f"Checking if {matched_raw.name} is downloaded...")
 
-        if not ensure_file_downloaded(matched_raw):
-            logger.warning("Skipping %s: still offloaded after timeout", matched_raw.name)
+        if not ensure_file_downloaded(matched_raw, timeout_seconds=timeout_seconds):
+            emit(f"Skipping {matched_raw.name}: still offloaded after timeout")
             stats["skipped_offloaded"] += 1
             continue
 
         output_path = output_dir / matched_raw.name
         try:
             shutil.copy2(matched_raw, output_path)
-            if verbose:
-                logger.info("Copied %s to %s", matched_raw.name, output_dir)
+            emit(f"Copied {matched_raw.name} to {output_dir}")
             stats["copied"] += 1
             copied_nebs.add(nef_key)
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Failed to copy %s: %s", matched_raw.name, exc)
+        except Exception:
+            continue
 
     return stats
 

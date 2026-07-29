@@ -1,18 +1,14 @@
 # Photo Helper
 
-Photo Helper processes images from any input directory and produces:
-- processed outputs (split landscape images or center-cropped portraits)
-- framed outputs sized for Instagram-style posting
-- collage outputs from a background image and ordered foreground images
-- raw-photo copies matched to JPG names
+Photo Helper is a single CLI for four workflows:
+- framing and splitting Instagram-style source photos
+- building collages from one background and ordered foregrounds
+- stitching panoramas from ordered image folders
+- finding and copying matching raw NEF files
 
-The implementation now lives in the `photo_helper` package, with compatibility wrappers preserved under `photo_framer` for older notebook imports and scripts.
+The reusable image logic lives in the `photo_helper` package, and the top-level `photo_helper.py` script dispatches to subcommands such as `framer`, `collage`, `panorama`, and `find-raws`.
 
-Input directories should contain images that are square, taller, or moderately wide. Standard landscape images are split into two contiguous panels, while images that are approximately 2:1 are split into three contiguous panels. All processed and framed outputs are resized to the exact target dimensions (e.g., 1080x1440 for 3:4).
-
-The core logic lives in the Python package and is reused by both:
-- a command line script
-- the notebook
+Input directories should contain images that are square, taller, or moderately wide. Standard landscape images are split into two contiguous panels, while images that are approximately 2:1 are split into three contiguous panels. All processed and framed outputs are resized to the exact target dimensions.
 
 ## Requirements
 
@@ -27,11 +23,11 @@ python -m pip install -r requirements.txt
 
 Run against any directory of images:
 
-python photo_framer_cli.py /path/to/source-images
+python photo_helper.py framer /path/to/source-images
 
 You can also run the executable form:
 
-./photo_framer_cli.py /path/to/source-images
+./photo_helper.py framer /path/to/source-images
 
 Default outputs are created next to the source directory:
 - instagram (processed images at exact target size)
@@ -41,13 +37,13 @@ Default outputs are created next to the source directory:
 
 Basic form:
 
-python photo_framer_cli.py SOURCE_DIR [options]
+python photo_helper.py framer SOURCE_DIR [options]
 
 Common options:
 - --processed-dir PATH
 - --framed-dir PATH
 - --target-width INT (default 1080)
-- --framed-aspect-ratio 1:1|4:3|3:4 (default 1:1, 3:4 is vertical)
+- --framed-aspect-ratio W:H (default 1:1, for example 3:4 or 4:3)
 - --target-height INT (optional explicit override)
 - --baseline-frame-width INT (default 60)
 - --frame-color R,G,B (default 255,255,255)
@@ -60,7 +56,7 @@ Common options:
 
 Example with explicit output folders:
 
-python photo_framer_cli.py ./instagram --processed-dir ./instagram-processed --framed-dir ./instagram-framed --validate
+python photo_helper.py framer ./instagram --processed-dir ./instagram-processed --framed-dir ./instagram-framed --validate
 
 Example flags for maize borders: 
 --foreground-border-width 13 --foreground-border-color 255,203,5
@@ -73,7 +69,7 @@ Create a master collage and per-panel outputs from one background image and one 
 
 Basic form:
 
-python photo_collage_cli.py BACKGROUND FOREGROUND [FOREGROUND ...] [options]
+python photo_helper.py collage BACKGROUND FOREGROUND [FOREGROUND ...] [options]
 
 The foreground images are placed left-to-right in the order you pass them.
 
@@ -92,15 +88,15 @@ Common options:
 
 Example:
 
-python photo_collage_cli.py --foreground-border-color 255,255,255 --foreground-border-width 40 ...
+python photo_helper.py collage --foreground-border-color 255,255,255 --foreground-border-width 40 ...
 
 Example using the included test images:
 
-python photo_collage_cli.py ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --validate
+python photo_helper.py collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --validate
 
 Example with maize foreground borders:
 
-python photo_collage_cli.py ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --foreground-border-width 18 --foreground-border-color 255,203,5 --validate
+python photo_helper.py collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --foreground-border-width 18 --foreground-border-color 255,203,5 --validate
 
 The tool crops the background to an aspect ratio of roughly N:4, where N is the number of foreground images, then slices it into N vertical 1080x1440 panels. Each foreground is center-cropped to 3:4, scaled down slightly, and centered in its panel so some background remains visible.
 
@@ -114,7 +110,7 @@ Create a single center-focused rectangular panorama from an ordered sequence of 
 
 Basic usage:
 
-python photo_panorama_cli.py /path/to/source-nefs --output-dir ./panorama-out --output-name panorama.tiff
+python photo_helper.py panorama /path/to/source-nefs --output-dir ./panorama-out --output-name panorama.tiff
 
 Options:
 - `--output-dir PATH` : Directory to write the panorama (default: current working directory).
@@ -128,6 +124,20 @@ Notes and limitations:
 - The stitcher centers the panorama on the middle image, aligns images pairwise, blends seams using a simple feathering approach, and crops to a rectangular region that preserves as many input pixels as possible.
 
 
+## Raw Finder CLI
+
+Find and copy NEF files that match JPG names:
+
+python photo_helper.py find-raws --jpg-dir ./maize-and-blue --output-dir ./select-raws
+
+Common options:
+- --jpg-dir PATH
+- --raw-source PATH
+- --google-drive-root PATH
+- --output-dir PATH
+- --timeout INT
+- -v / --verbose
+
 ## Notebook Usage
 
 Open and run [photo_framer.ipynb](photo_framer.ipynb).
@@ -139,7 +149,7 @@ Suggested order:
 4. Run Cell 13 (basic tests, optional)
 5. Run Cells 15 and 16 (processing, validation, diagnostics, preview)
 
-The notebook imports shared logic from the compatibility wrapper [photo_framer/core.py](photo_framer/core.py), which forwards to the new `photo_helper` submodules so notebook and CLI behavior stay aligned.
+The notebook imports shared logic from the `photo_helper` package so notebook and CLI behavior stay aligned.
 
 ## Supported Files
 
@@ -163,9 +173,7 @@ Use --extensions to customize accepted suffixes.
 - [photo_helper/framing.py](photo_helper/framing.py): framing and processing pipeline
 - [photo_helper/collage.py](photo_helper/collage.py): collage rendering and validation
 - [photo_helper/raw.py](photo_helper/raw.py): raw-photo finder and copier
-- [photo_framer/core.py](photo_framer/core.py): legacy compatibility wrapper
-- [photo_framer_cli.py](photo_framer_cli.py): framing command line entrypoint
-- [photo_collage_cli.py](photo_collage_cli.py): collage command line entrypoint
-- [find_raw_photos_cli.py](find_raw_photos_cli.py): raw-photo command line entrypoint
+- [photo_helper/panorama.py](photo_helper/panorama.py): panorama stitching
+- [photo_helper.py](photo_helper.py): consolidated CLI entrypoint
 - [photo_framer.ipynb](photo_framer.ipynb): interactive workflow and preview
 - [requirements.txt](requirements.txt): dependencies
