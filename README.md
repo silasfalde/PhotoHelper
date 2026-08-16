@@ -1,12 +1,12 @@
 # Photo Helper
 
-Photo Helper is a single CLI for four workflows:
+Photo Helper is a single installable CLI for four workflows:
 - framing and splitting Instagram-style source photos
 - building collages from one background and ordered foregrounds
 - stitching panoramas from ordered image folders
 - finding and copying matching raw NEF files
 
-The reusable image logic lives in the `photo_helper` package, and the top-level `photo_helper.py` script dispatches to subcommands such as `framer`, `collage`, `panorama`, and `find-raws`.
+The reusable image logic lives in the `photo_helper` package, and the CLI dispatches to subcommands such as `framer`, `collage`, `panorama`, and `find-raws`.
 
 Input directories should contain images that are square, taller, or moderately wide. Standard landscape images are split into two contiguous panels, while images that are approximately 2:1 are split into three contiguous panels. All processed and framed outputs are resized to the exact target dimensions.
 
@@ -19,13 +19,21 @@ Install dependencies:
 
 python -m pip install -r requirements.txt
 
+Install the CLI so it is executable from anywhere:
+
+python -m pip install -e .
+
+After that, run:
+
+photohelper --help
+
 ## Quick Start
 
 Run against any directory of images:
 
-python photo_helper.py framer /path/to/source-images
+photohelper framer /path/to/source-images
 
-You can also run the executable form:
+You can still run the compatibility script form:
 
 ./photo_helper.py framer /path/to/source-images
 
@@ -37,7 +45,14 @@ Default outputs are created next to the source directory:
 
 Basic form:
 
-python photo_helper.py framer SOURCE_DIR [options]
+photohelper framer SOURCE_DIR [options]
+
+Discover help directly in CLI:
+- photohelper --help
+- photohelper framer --help
+- photohelper collage --help
+- photohelper panorama --help
+- photohelper find-raws --help
 
 Common options:
 - --processed-dir PATH
@@ -56,7 +71,7 @@ Common options:
 
 Example with explicit output folders:
 
-python photo_helper.py framer ./instagram --processed-dir ./instagram-processed --framed-dir ./instagram-framed --validate
+photohelper framer ./instagram --processed-dir ./instagram-processed --framed-dir ./instagram-framed --validate
 
 Example flags for maize borders: 
 --foreground-border-width 13 --foreground-border-color 255,203,5
@@ -69,7 +84,7 @@ Create a master collage and per-panel outputs from one background image and one 
 
 Basic form:
 
-python photo_helper.py collage BACKGROUND FOREGROUND [FOREGROUND ...] [options]
+photohelper collage BACKGROUND FOREGROUND [FOREGROUND ...] [options]
 
 The foreground images are placed left-to-right in the order you pass them.
 
@@ -88,15 +103,15 @@ Common options:
 
 Example:
 
-python photo_helper.py collage --foreground-border-color 255,255,255 --foreground-border-width 40 ...
+photohelper collage --foreground-border-color 255,255,255 --foreground-border-width 40 ...
 
 Example using the included test images:
 
-python photo_helper.py collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --validate
+photohelper collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --validate
 
 Example with maize foreground borders:
 
-python photo_helper.py collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --foreground-border-width 18 --foreground-border-color 255,203,5 --validate
+photohelper collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --foreground-border-width 18 --foreground-border-color 255,203,5 --validate
 
 The tool crops the background to an aspect ratio of roughly N:4, where N is the number of foreground images, then slices it into N vertical 1080x1440 panels. Each foreground is center-cropped to 3:4, scaled down slightly, and centered in its panel so some background remains visible.
 
@@ -110,7 +125,7 @@ Create a single center-focused rectangular panorama from an ordered sequence of 
 
 Basic usage:
 
-python photo_helper.py panorama /path/to/source-nefs --output-dir ./panorama-out --output-name panorama.tiff
+photohelper panorama /path/to/source-nefs --output-dir ./panorama-out --output-name panorama.tiff
 
 Options:
 - `--output-dir PATH` : Directory to write the panorama (default: current working directory).
@@ -128,7 +143,7 @@ Notes and limitations:
 
 Find and copy NEF files that match JPG names:
 
-python photo_helper.py find-raws --jpg-dir ./maize-and-blue --output-dir ./select-raws
+photohelper find-raws --jpg-dir ./maize-and-blue --output-dir ./select-raws
 
 Common options:
 - --jpg-dir PATH

@@ -17,42 +17,42 @@ This tool scans a directory of JPG files and matches them with corresponding raw
 
 ### Basic usage (uses defaults):
 ```bash
-python3 find_raw_photos_cli.py
+photohelper find-raws
 ```
 
 Default behavior:
 - JPG directory: `./maize-and-blue/`
 - Raw source: `/Users/silasfaldenew/Library/CloudStorage/GoogleDrive-sfalde@umich.edu/My Drive`
-- Output: `./maize-and-blue-raws/`
+- Output: `./select-raws/`
 
 ### Custom JPG directory:
 ```bash
-python3 find_raw_photos_cli.py --jpg-dir /path/to/jpgs
+photohelper find-raws --jpg-dir /path/to/jpgs
 ```
 
 ### Custom output directory:
 ```bash
-python3 find_raw_photos_cli.py --output-dir /path/to/output
+photohelper find-raws --output-dir /path/to/output
 ```
 
 ### Custom Google Drive location:
 ```bash
-python3 find_raw_photos_cli.py --raw-source /path/to/google/drive
+photohelper find-raws --raw-source /path/to/google/drive
 ```
 
 Or override the detected path:
 ```bash
-python3 find_raw_photos_cli.py --google-drive-root /path/to/google/drive
+photohelper find-raws --google-drive-root /path/to/google/drive
 ```
 
 ### Verbose mode (detailed logging):
 ```bash
-python3 find_raw_photos_cli.py --verbose
+photohelper find-raws --verbose
 ```
 
 ### Adjust offloaded file download timeout:
 ```bash
-python3 find_raw_photos_cli.py --timeout 60  # 60 seconds instead of default 30
+photohelper find-raws --timeout 60  # 60 seconds instead of default 30
 ```
 
 ## How It Works

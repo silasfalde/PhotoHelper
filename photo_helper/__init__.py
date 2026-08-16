@@ -33,7 +33,18 @@ from .common import (
 )
 from .framing_runtime import process_all, render_framed_full, render_framed_split_half, render_framed_split_third, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
 from .raw import copy_matched_raws, ensure_file_downloaded, extract_base_name, find_all_raw_files, find_jpg_files, is_file_offloaded, match_raw_to_jpg, summarize_results
-from .panorama import list_images_sorted, stitch_images_from_paths, save_tiff
+def _missing_panorama_dependency(*_args, **_kwargs):
+    raise ModuleNotFoundError(
+        "Panorama dependencies are missing. Install optional packages: opencv-python, rawpy, and tifffile."
+    )
+
+
+try:
+    from .panorama import list_images_sorted, stitch_images_from_paths, save_tiff
+except ModuleNotFoundError:
+    list_images_sorted = _missing_panorama_dependency
+    stitch_images_from_paths = _missing_panorama_dependency
+    save_tiff = _missing_panorama_dependency
 
 __all__ = [
     "__version__",

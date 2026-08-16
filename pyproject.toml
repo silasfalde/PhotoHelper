@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "photohelper"
+version = "0.1.0"
+description = "Photo Helper CLI for framing, collage, panorama, and raw matching workflows"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "silasfalde" }
+]
+dependencies = [
+  "pillow>=10.0.0",
+  "rawpy>=0.18.0",
+  "opencv-python>=4.7.0",
+  "tifffile>=2023.11.0",
+  "numpy>=1.24.0"
+]
+
+[project.urls]
+Homepage = "https://github.com/silasfalde/PhotoHelper"
+
+[project.scripts]
+photohelper = "photo_helper.cli:main"
+photo-helper = "photo_helper.cli:main"
+
+[tool.setuptools]
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["photo_helper*"]
+exclude = ["tests*"]
