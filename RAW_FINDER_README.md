@@ -15,44 +15,29 @@ This tool scans a directory of JPG files and matches them with corresponding raw
 
 ## Usage
 
-### Basic usage (uses defaults):
+### Basic usage:
 ```bash
-photohelper find-raws
+photohelper find-raws /path/to/jpgs /path/to/raw-source
 ```
 
-Default behavior:
-- JPG directory: `./maize-and-blue/`
-- Raw source: `/Users/silasfaldenew/Library/CloudStorage/GoogleDrive-sfalde@umich.edu/My Drive`
-- Output: `./select-raws/`
+Behavior:
+- JPG directory: first positional argument
+- Raw source: second positional argument
+- Output: `jpg-dir` parent + `select-raws` (unless `--output-dir` is set)
 
-### Custom JPG directory:
+### With custom output directory:
 ```bash
-photohelper find-raws --jpg-dir /path/to/jpgs
-```
-
-### Custom output directory:
-```bash
-photohelper find-raws --output-dir /path/to/output
-```
-
-### Custom Google Drive location:
-```bash
-photohelper find-raws --raw-source /path/to/google/drive
-```
-
-Or override the detected path:
-```bash
-photohelper find-raws --google-drive-root /path/to/google/drive
+photohelper find-raws /path/to/jpgs /path/to/raw-source --output-dir /path/to/output
 ```
 
 ### Verbose mode (detailed logging):
 ```bash
-photohelper find-raws --verbose
+photohelper find-raws /path/to/jpgs /path/to/raw-source --verbose
 ```
 
 ### Adjust offloaded file download timeout:
 ```bash
-photohelper find-raws --timeout 60  # 60 seconds instead of default 30
+photohelper find-raws /path/to/jpgs /path/to/raw-source --timeout 60  # 60 seconds instead of default 30
 ```
 
 ## How It Works

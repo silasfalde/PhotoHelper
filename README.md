@@ -143,12 +143,9 @@ Notes and limitations:
 
 Find and copy NEF files that match JPG names:
 
-photohelper find-raws --jpg-dir ./maize-and-blue --output-dir ./select-raws
+photohelper find-raws ./maize-and-blue /path/to/raw-source --output-dir ./select-raws
 
 Common options:
-- --jpg-dir PATH
-- --raw-source PATH
-- --google-drive-root PATH
 - --output-dir PATH
 - --timeout INT
 - -v / --verbose

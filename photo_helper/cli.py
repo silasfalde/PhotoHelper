@@ -11,7 +11,6 @@ from .common import AppConfig, load_image, load_image_and_metadata, save_collage
 from .framing_runtime import process_all, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
 from .raw import copy_matched_raws, find_jpg_files
 
-DEFAULT_RAW_SOURCE = Path.home() / "Library" / "CloudStorage" / "GoogleDrive-sfalde@umich.edu" / "My Drive"
 SUBCOMMANDS = {"framer", "collage", "panorama", "find-raws"}
 
 
@@ -183,32 +182,16 @@ def add_find_raws_subcommand(subparsers: argparse._SubParsersAction[argparse.Arg
         formatter_class=HelpFormatter,
         epilog=(
             "Examples:\n"
-            "  photohelper find-raws --jpg-dir ./maize-and-blue --output-dir ./select-raws\n"
-            "  photohelper find-raws --jpg-dir ./jpgs --raw-source /mnt/archive --timeout 60 -v"
+            "  photohelper find-raws ./maize-and-blue /mnt/archive --output-dir ./select-raws\n"
+            "  photohelper find-raws ./jpgs /mnt/archive --timeout 60 -v"
         ),
     )
-    parser.add_argument(
-        "--jpg-dir",
-        type=Path,
-        default=Path.cwd() / "maize-and-blue",
-        help="Directory containing JPG files to match",
-    )
-    parser.add_argument(
-        "--raw-source",
-        type=Path,
-        default=DEFAULT_RAW_SOURCE,
-        help=f"Root directory to search for NEF files (default: {DEFAULT_RAW_SOURCE})",
-    )
+    parser.add_argument("jpg_dir", type=Path, help="Directory containing JPG files to match")
+    parser.add_argument("raw_source", type=Path, help="Root directory to search for NEF files")
     parser.add_argument(
         "--output-dir",
         type=Path,
         help="Output directory for copied NEF files (default: jpg-dir parent + '/select-raws')",
-    )
-    parser.add_argument(
-        "--google-drive-root",
-        type=Path,
-        dest="google_drive_root_arg",
-        help="Backward-compatible alias for --raw-source",
     )
     parser.add_argument("--verbose", "-v", action="store_true", help="Enable verbose logging for debugging.")
     parser.add_argument("--timeout", type=int, default=30, help="Timeout in seconds for downloading offloaded files")
@@ -225,7 +208,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  photohelper framer /path/to/source-images\n"
             "  photohelper collage background.jpg fg1.jpg fg2.jpg\n"
             "  photohelper panorama ./ordered-nefs --output-dir ./out\n"
-            "  photohelper find-raws --jpg-dir ./maize-and-blue --output-dir ./select-raws\n\n"
+            "  photohelper find-raws ./maize-and-blue /mnt/archive --output-dir ./select-raws\n\n"
             "Run 'photohelper <subcommand> --help' for subcommand-specific options."
         ),
     )
@@ -433,7 +416,7 @@ def run_panorama(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
 
 def run_find_raws(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     jpg_dir = args.jpg_dir.resolve()
-    raw_source = args.google_drive_root_arg.resolve() if args.google_drive_root_arg else args.raw_source.resolve()
+    raw_source = args.raw_source.resolve()
 
     if args.output_dir:
         output_dir = args.output_dir.resolve()
