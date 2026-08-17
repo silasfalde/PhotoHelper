@@ -12,18 +12,30 @@ from photo_helper import (
     AppConfig,
     build_collage,
     copy_matched_raws,
+    crop_to_aspect,
     load_image,
     process_all,
+    resize_exact,
     run_basic_tests,
     run_collage_tests,
     summarize_source_images,
     validate_outputs,
 )
+from photo_helper.framing import split_source_into_processed_panels
 
 
 class PhotoHelperTests(unittest.TestCase):
     def _make_image(self, path: Path, size: tuple[int, int], color: tuple[int, int, int]) -> None:
         Image.new("RGB", size, color).save(path, quality=95)
+
+    def _make_x_gradient(self, size: tuple[int, int]) -> Image.Image:
+        w, h = size
+        img = Image.new("RGB", size)
+        for x in range(w):
+            value = x % 256
+            for y in range(h):
+                img.putpixel((x, y), (value, value, value))
+        return img
 
     def test_legacy_namespace_still_works(self) -> None:
         self.assertTrue(hasattr(photo_helper, "process_all"))
@@ -71,7 +83,7 @@ class PhotoHelperTests(unittest.TestCase):
             self.assertEqual(stats.framed_written, 3)
             self.assertEqual(len(borders), 3)
             self.assertEqual(borders["landscape_R.jpg"].left, 0)
-            self.assertEqual(borders["landscape_R.jpg"].right, 60)
+            self.assertEqual(borders["landscape_R.jpg"].right, 40)
 
             validate_outputs(cfg, borders)
 
@@ -171,6 +183,26 @@ class PhotoHelperTests(unittest.TestCase):
             framed_files = sorted(p.name for p in framed_dir.glob("*.jpg"))
             self.assertEqual(processed_files, ["four_three_L.jpg", "four_three_R.jpg"])
             self.assertEqual(framed_files, ["four_three_L.jpg", "four_three_R.jpg"])
+
+    def test_landscape_pair_split_has_continuous_seam(self) -> None:
+        source = self._make_x_gradient((1200, 800))
+        left, right = split_source_into_processed_panels(source, (600, 800), panel_count=2)
+        strip = resize_exact(crop_to_aspect(source, 1200, 800), 1200, 800)
+
+        for y in range(0, 800, 40):
+            self.assertEqual(left.getpixel((599, y)), strip.getpixel((599, y)))
+            self.assertEqual(right.getpixel((0, y)), strip.getpixel((600, y)))
+
+    def test_landscape_triplet_split_has_continuous_seams(self) -> None:
+        source = self._make_x_gradient((1800, 900))
+        left, middle, right = split_source_into_processed_panels(source, (600, 800), panel_count=3)
+        strip = resize_exact(crop_to_aspect(source, 1800, 800), 1800, 800)
+
+        for y in range(0, 800, 40):
+            self.assertEqual(left.getpixel((599, y)), strip.getpixel((599, y)))
+            self.assertEqual(middle.getpixel((0, y)), strip.getpixel((600, y)))
+            self.assertEqual(middle.getpixel((599, y)), strip.getpixel((1199, y)))
+            self.assertEqual(right.getpixel((0, y)), strip.getpixel((1200, y)))
 
     def test_collage_builder_creates_expected_canvas(self) -> None:
         background = Image.new("RGB", (500, 300), (20, 30, 40))

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Dict, List, Optional, Tuple
 
-from PIL import Image, ImageOps
+from PIL import Image
 
 from .common import (
     AppConfig,
@@ -58,6 +58,83 @@ def render_framed_full(
     return out, border
 
 
+def build_split_strip(
+    img: Image.Image,
+    target_size: Tuple[int, int],
+    panel_count: int,
+) -> Image.Image:
+    if panel_count < 2:
+        raise ValueError("panel_count must be at least 2")
+
+    target_w, target_h = target_size
+    strip_w = target_w * panel_count
+    strip_cropped = crop_to_aspect(img, strip_w, target_h)
+    return resize_exact(strip_cropped, strip_w, target_h)
+
+
+def split_source_into_processed_panels(
+    img: Image.Image,
+    target_size: Tuple[int, int],
+    panel_count: int,
+) -> List[Image.Image]:
+    strip = build_split_strip(img, target_size, panel_count)
+    panel_w, panel_h = target_size
+    return [
+        strip.crop((idx * panel_w, 0, (idx + 1) * panel_w, panel_h))
+        for idx in range(panel_count)
+    ]
+
+
+def render_framed_split_panel(
+    panel: Image.Image,
+    panel_index: int,
+    panel_count: int,
+    target_size: Tuple[int, int],
+    baseline: int,
+    frame_color: Tuple[int, int, int],
+) -> Tuple[Image.Image, BorderSpec]:
+    if panel_count < 2:
+        raise ValueError("panel_count must be at least 2")
+    if panel_index < 0 or panel_index >= panel_count:
+        raise ValueError("panel_index out of range")
+
+    target_w, target_h = target_size
+    split_baseline = split_frame_baseline(baseline)
+
+    left_border = split_baseline if panel_index == 0 else 0
+    right_border = split_baseline if panel_index == panel_count - 1 else 0
+    top_border = baseline
+    bottom_border = baseline
+
+    content_w = target_w - left_border - right_border
+    content_h = target_h - top_border - bottom_border
+    if content_w <= 0 or content_h <= 0:
+        raise ValueError("Baseline frame width is too large for target size")
+
+    panel_resized = resize_exact(panel, target_w, target_h)
+    y_crop = max(0, (target_h - content_h) // 2)
+
+    if panel_index == 0:
+        x_crop = target_w - content_w
+    elif panel_index == panel_count - 1:
+        x_crop = 0
+    else:
+        x_crop = max(0, (target_w - content_w) // 2)
+
+    content = panel_resized.crop((x_crop, y_crop, x_crop + content_w, y_crop + content_h))
+
+    out = Image.new("RGB", (target_w, target_h), frame_color)
+    out.paste(content, (left_border, top_border))
+
+    border = BorderSpec(
+        left=left_border,
+        top=top_border,
+        right=right_border,
+        bottom=bottom_border,
+    )
+    return out, border
+
+
 def render_framed_split_half(
     img: Image.Image,
     side: str,
@@ -68,31 +145,15 @@ def render_framed_split_half(
 ) -> Tuple[Image.Image, BorderSpec]:
     if side not in {"left", "right"}:
         raise ValueError("side must be 'left' or 'right'")
-
-    target_w, target_h = target_size
-    split_baseline = split_frame_baseline(baseline)
-    avail_w = target_w - split_baseline
-    avail_h = target_h - (2 * baseline)
-    if avail_w <= 0 or avail_h <= 0:
-        raise ValueError("Baseline frame width is too large for target size")
-
-    resized = resize_to_fit(img, avail_w, avail_h, allow_upscale)
-    new_w, new_h = resized.size
-
-    out = Image.new("RGB", (target_w, target_h), frame_color)
-    gap_y = avail_h - new_h
-    y = baseline + (gap_y // 2)
-
-    if side == "left":
-        x = target_w - new_w
-        out.paste(resized, (x, y))
-        border = BorderSpec(left=x, top=y, right=0, bottom=target_h - (y + new_h))
-    else:
-        x = 0
-        out.paste(resized, (x, y))
-        border = BorderSpec(left=0, top=y, right=target_w - new_w, bottom=target_h - (y + new_h))
-
-    return out, border
+    panel_index = 0 if side == "left" else 1
+    return render_framed_split_panel(
+        panel=img,
+        panel_index=panel_index,
+        panel_count=2,
+        target_size=target_size,
+        baseline=baseline,
+        frame_color=frame_color,
+    )
 
 
 def render_framed_split_third(
@@ -105,46 +166,15 @@ def render_framed_split_third(
 ) -> Tuple[Image.Image, BorderSpec]:
     if position not in {"left", "middle", "right"}:
         raise ValueError("position must be 'left', 'middle', or 'right'")
-
-    target_w, target_h = target_size
-    split_baseline = split_frame_baseline(baseline)
-    avail_h = target_h - (2 * baseline)
-    if position == "middle":
-        avail_w = target_w
-    else:
-        avail_w = target_w - split_baseline
-    if avail_w <= 0 or avail_h <= 0:
-        raise ValueError("Baseline frame width is too large for target size")
-
-    if position == "middle":
-        resized = resize_exact(crop_to_aspect(img, target_w, avail_h), target_w, avail_h)
-    else:
-        resized = resize_to_fit(img, avail_w, avail_h, allow_upscale)
-    new_w, new_h = resized.size
-
-    out = Image.new("RGB", (target_w, target_h), frame_color)
-    gap_y = avail_h - new_h
-    y = baseline + (gap_y // 2)
-
-    if position == "left":
-        x = target_w - new_w
-        out.paste(resized, (x, y))
-        border = BorderSpec(left=x, top=y, right=0, bottom=target_h - (y + new_h))
-    elif position == "middle":
-        x = 0
-        out.paste(resized, (x, y))
-        border = BorderSpec(
-            left=0,
-            top=y,
-            right=0,
-            bottom=target_h - (y + new_h),
-        )
-    else:
-        x = 0
-        out.paste(resized, (x, y))
-        border = BorderSpec(left=0, top=y, right=target_w - new_w, bottom=target_h - (y + new_h))
-
-    return out, border
+    panel_map = {"left": 0, "middle": 1, "right": 2}
+    return render_framed_split_panel(
+        panel=img,
+        panel_index=panel_map[position],
+        panel_count=3,
+        target_size=target_size,
+        baseline=baseline,
+        frame_color=frame_color,
+    )
 
 
 def summarize_source_images(cfg: AppConfig) -> Tuple[int, int, int]:
@@ -184,28 +214,20 @@ def process_all(
 
             if mode == "landscape_triplet":
                 stats.landscapes += 1
-                left_img, middle_img, right_img = split_landscape_into_three(img)
-                target_w, target_h = cfg.target_size
+                split_panels = split_source_into_processed_panels(img, cfg.target_size, panel_count=3)
 
-                left_cropped = crop_to_aspect(left_img, target_w, target_h)
-                left_proc = resize_exact(left_cropped, target_w, target_h)
+                left_proc, middle_proc, right_proc = split_panels
                 proc_left = cfg.processed_dir / f"{stem}_01{suffix}"
                 save_jpeg(left_proc, proc_left, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
-
-                middle_cropped = crop_to_aspect(middle_img, target_w, target_h)
-                middle_proc = resize_exact(middle_cropped, target_w, target_h)
                 proc_middle = cfg.processed_dir / f"{stem}_02{suffix}"
                 save_jpeg(middle_proc, proc_middle, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
-
-                right_cropped = crop_to_aspect(right_img, target_w, target_h)
-                right_proc = resize_exact(right_cropped, target_w, target_h)
                 proc_right = cfg.processed_dir / f"{stem}_03{suffix}"
                 save_jpeg(right_proc, proc_right, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
 
                 stats.processed_written += 3
 
                 framed_left, border_left = render_framed_split_third(
-                    left_cropped,
+                    left_proc,
                     position="left",
                     target_size=cfg.target_size,
                     baseline=cfg.baseline_frame_width,
@@ -213,7 +235,7 @@ def process_all(
                     allow_upscale=cfg.allow_upscale,
                 )
                 framed_middle, border_middle = render_framed_split_third(
-                    middle_cropped,
+                    middle_proc,
                     position="middle",
                     target_size=cfg.target_size,
                     baseline=cfg.baseline_frame_width,
@@ -221,7 +243,7 @@ def process_all(
                     allow_upscale=cfg.allow_upscale,
                 )
                 framed_right, border_right = render_framed_split_third(
-                    right_cropped,
+                    right_proc,
                     position="right",
                     target_size=cfg.target_size,
                     baseline=cfg.baseline_frame_width,
@@ -251,23 +273,18 @@ def process_all(
                 )
             elif mode == "landscape_pair":
                 stats.landscapes += 1
-                left_img, right_img = split_landscape_exact(img)
-                target_w, target_h = cfg.target_size
+                split_panels = split_source_into_processed_panels(img, cfg.target_size, panel_count=2)
 
-                left_cropped = crop_to_aspect(left_img, target_w, target_h)
-                left_proc = resize_exact(left_cropped, target_w, target_h)
+                left_proc, right_proc = split_panels
                 proc_left = cfg.processed_dir / f"{stem}_L{suffix}"
                 save_jpeg(left_proc, proc_left, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
-
-                right_cropped = crop_to_aspect(right_img, target_w, target_h)
-                right_proc = resize_exact(right_cropped, target_w, target_h)
                 proc_right = cfg.processed_dir / f"{stem}_R{suffix}"
                 save_jpeg(right_proc, proc_right, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
 
                 stats.processed_written += 2
 
                 framed_left, border_left = render_framed_split_half(
-                    left_cropped,
+                    left_proc,
                     side="left",
                     target_size=cfg.target_size,
                     baseline=cfg.baseline_frame_width,
@@ -275,7 +292,7 @@ def process_all(
                     allow_upscale=cfg.allow_upscale,
                 )
                 framed_right, border_right = render_framed_split_half(
-                    right_cropped,
+                    right_proc,
                     side="right",
                     target_size=cfg.target_size,
                     baseline=cfg.baseline_frame_width,
@@ -524,7 +541,7 @@ def run_basic_tests() -> None:
     assert right_framed.size == (1080, 1080)
     split_baseline = split_frame_baseline(40)
     assert left_border.right == 0
-    assert left_border.left == 80
+    assert left_border.left == split_baseline
     assert left_border.top == 40
     assert left_border.bottom == 40
     assert middle_border.left == 0
@@ -532,7 +549,7 @@ def run_basic_tests() -> None:
     assert middle_border.top == 40
     assert middle_border.bottom == 40
     assert right_border.left == 0
-    assert right_border.right == 80
+    assert right_border.right == split_baseline
     assert right_border.top == 40
     assert right_border.bottom == 40
 
