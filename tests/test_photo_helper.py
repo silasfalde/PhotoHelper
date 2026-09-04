@@ -22,6 +22,7 @@ from photo_helper import (
     validate_outputs,
 )
 from photo_helper.framing import split_source_into_processed_panels
+from photo_helper.cli import build_parser
 
 
 class PhotoHelperTests(unittest.TestCase):
@@ -41,6 +42,41 @@ class PhotoHelperTests(unittest.TestCase):
         self.assertTrue(hasattr(photo_helper, "process_all"))
         self.assertTrue(hasattr(photo_helper, "copy_matched_raws"))
         self.assertTrue(hasattr(photo_helper, "build_collage"))
+
+    def test_cli_uses_short_options_and_portrait_default_ratio(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["framer", "source"])
+        self.assertEqual(args.ratio, "3:4")
+        self.assertEqual(args.width, 1080)
+        self.assertIsNone(args.height)
+
+        args = parser.parse_args(
+            [
+                "collage",
+                "background.jpg",
+                "foreground.jpg",
+                "--output",
+                "out",
+                "--width",
+                "720",
+                "--height",
+                "960",
+                "--scale",
+                "0.8",
+                "--border-width",
+                "12",
+                "--border-color",
+                "1,2,3",
+            ]
+        )
+        self.assertEqual(args.output, Path("out"))
+        self.assertEqual((args.width, args.height), (720, 960))
+        self.assertEqual(args.scale, 0.8)
+        self.assertEqual(args.border_width, 12)
+        self.assertEqual(args.border_color, "1,2,3")
+
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["framer", "source", "--framed-aspect-ratio", "1:1"])
 
     def test_builtin_smoke_tests(self) -> None:
         run_basic_tests()
@@ -80,8 +116,8 @@ class PhotoHelperTests(unittest.TestCase):
             self.assertEqual(stats.portraits, 1)
             self.assertEqual(stats.landscapes, 1)
             self.assertEqual(stats.processed_written, 3)
-            self.assertEqual(stats.framed_written, 3)
-            self.assertEqual(len(borders), 3)
+            self.assertEqual(stats.framed_written, 4)
+            self.assertEqual(len(borders), 4)
             self.assertEqual(borders["landscape_R.jpg"].left, 0)
             self.assertEqual(borders["landscape_R.jpg"].right, 40)
 
@@ -95,7 +131,7 @@ class PhotoHelperTests(unittest.TestCase):
             )
             self.assertEqual(
                 framed_files,
-                ["landscape_L.jpg", "landscape_R.jpg", "portrait.jpg"],
+                ["landscape_L.jpg", "landscape_R.jpg", "landscape_full.jpg", "portrait.jpg"],
             )
 
     def test_two_to_one_landscape_is_split_into_three(self) -> None:
@@ -174,15 +210,24 @@ class PhotoHelperTests(unittest.TestCase):
             self.assertEqual(stats.portraits, 0)
             self.assertEqual(stats.landscapes, 1)
             self.assertEqual(stats.processed_written, 2)
-            self.assertEqual(stats.framed_written, 2)
-            self.assertEqual(len(borders), 2)
+            self.assertEqual(stats.framed_written, 3)
+            self.assertEqual(len(borders), 3)
 
             validate_outputs(cfg, borders)
 
             processed_files = sorted(p.name for p in processed_dir.glob("*.jpg"))
             framed_files = sorted(p.name for p in framed_dir.glob("*.jpg"))
             self.assertEqual(processed_files, ["four_three_L.jpg", "four_three_R.jpg"])
-            self.assertEqual(framed_files, ["four_three_L.jpg", "four_three_R.jpg"])
+            self.assertEqual(
+                framed_files,
+                ["four_three_L.jpg", "four_three_R.jpg", "four_three_full.jpg"],
+            )
+
+            with Image.open(framed_dir / "four_three_full.jpg") as framed:
+                self.assertEqual(framed.size, (600, 800))
+                self.assertEqual(framed.getpixel((300, 50)), (255, 255, 255))
+                center_pixel = framed.getpixel((300, 400))
+                self.assertNotEqual(center_pixel, (255, 255, 255))
 
     def test_landscape_pair_split_has_continuous_seam(self) -> None:
         source = self._make_x_gradient((1200, 800))

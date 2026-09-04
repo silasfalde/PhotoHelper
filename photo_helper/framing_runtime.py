@@ -137,22 +137,32 @@ def process_all(
                     frame_color=cfg.frame_color,
                     allow_upscale=cfg.allow_upscale,
                 )
+                framed_full, border_full = render_framed_full(
+                    img,
+                    target_size=cfg.target_size,
+                    baseline=cfg.baseline_frame_width,
+                    frame_color=cfg.frame_color,
+                    allow_upscale=cfg.allow_upscale,
+                )
 
                 fr_left = cfg.framed_dir / f"{stem}_L{suffix}"
                 fr_right = cfg.framed_dir / f"{stem}_R{suffix}"
+                fr_full = cfg.framed_dir / f"{stem}_full{suffix}"
                 save_jpeg(framed_left, fr_left, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
                 save_jpeg(framed_right, fr_right, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
-                stats.framed_written += 2
+                save_jpeg(framed_full, fr_full, cfg, exif_bytes=exif_bytes, icc_profile=icc_profile)
+                stats.framed_written += 3
 
                 framed_borders[fr_left.name] = border_left
                 framed_borders[fr_right.name] = border_right
+                framed_borders[fr_full.name] = border_full
 
                 records.append(
                     ProcessRecord(
                         source_name=src.name,
                         mode="landscape_pair",
                         processed_outputs=[proc_left.name, proc_right.name],
-                        framed_outputs=[fr_left.name, fr_right.name],
+                        framed_outputs=[fr_left.name, fr_right.name, fr_full.name],
                     )
                 )
             else:

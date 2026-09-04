@@ -39,12 +39,13 @@ photohelper framer SOURCE --run-tests   # Built-in smoke tests
 ### Framing (`framing`, `framing_runtime` modules)
 **What it does**: Split wide images into 2–3 equal panels, optionally add decorative borders, resize to exact dimensions.
 - **Inputs**: Source directory with images (square, portrait, or landscape)
-- **Outputs**: `instagram/` (processed), `instagram-framed/` (with frame) subdirectories
+- **Outputs**: `instagram/` (processed), `instagram-framed/` (with frame) subdirectories; normal landscape pairs also write `{stem}_full.jpg` to `instagram-framed/`
 - **Key CLI options**:
-  - `--target-width` (default: 1080)
-  - `--framed-aspect-ratio` W:H (default: 1:1)
-  - `--baseline-frame-width` (default: 60)
-  - `--frame-color R,G,B` (default: 255,255,255)
+  - `--width` (default: 1080)
+  - `--ratio` W:H (default: 3:4)
+  - `--height` (optional explicit override)
+  - `--frame-width` (default: 30)
+  - `--color R,G,B` (default: 255,255,255)
   - `--no-upscale`, `--reencode-portraits`, `--validate`
 - **Entry point**: [framing_runtime.py](photo_helper/framing_runtime.py) → `process_all()`
 
@@ -53,10 +54,10 @@ photohelper framer SOURCE --run-tests   # Built-in smoke tests
 - **Inputs**: One background image + N foreground images (passed as positional args)
 - **Outputs**: `master.jpg` + per-panel `panel_NN.jpg`
 - **Key CLI options**:
-  - `--output-dir` (required)
-  - `--panel-width`, `--panel-height` (default: 1080×1440)
-  - `--foreground-scale` (default: 0.78)
-  - `--foreground-border-width`, `--foreground-border-color`
+  - `--output` (required)
+  - `--width`, `--height` (default: 1080×1440)
+  - `--scale` (default: 0.78)
+  - `--border-width`, `--border-color`
 - **Entry point**: [collage.py](photo_helper/collage.py) → `build_collage()`
 
 ### Panorama (`panorama` module)
@@ -101,7 +102,7 @@ photohelper framer SOURCE --run-tests   # Built-in smoke tests
 | EXIF/ICC not preserved (panorama) | TIFF output doesn't embed | By design; apply profiles externally if needed |
 | Raw matching finds no files | Wrong suffix or base name mismatch | Use `--validate` on JPG dir; check naming against raw files |
 | Google Drive cloud files timeout | Files not synced; macOS-only handling | Increase `--timeout`; ensure full local sync first |
-| Panel output confusion | Default paths vary per workflow | Framer: parent/instagram; Collage: explicit --output-dir required |
+| Panel output confusion | Default paths vary per workflow | Framer: parent/instagram; Collage: parent/background-stem-collage unless `--output` is provided |
 | `--no-upscale` centering artifacts | Small images enlarged then centered | This is expected; use `--no-upscale` to disable enlargement |
 
 ## Module Dependency Map

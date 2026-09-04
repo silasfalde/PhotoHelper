@@ -8,7 +8,7 @@ Photo Helper is a single installable CLI for four workflows:
 
 The reusable image logic lives in the `photo_helper` package, and the CLI dispatches to subcommands such as `framer`, `collage`, `panorama`, and `find-raws`.
 
-Input directories should contain images that are square, taller, or moderately wide. Standard landscape images are split into two contiguous panels, while images that are approximately 2:1 are split into three contiguous panels. All processed and framed outputs are resized to the exact target dimensions.
+Input directories should contain images that are square, taller, or moderately wide. Standard landscape images are split into two contiguous panels, while images that are approximately 2:1 are split into three contiguous panels. Standard landscape images also get a `_full.jpg` framed output containing the complete source image with vertical white space. All processed and framed outputs are resized to the exact target dimensions.
 
 ## Requirements
 
@@ -55,13 +55,13 @@ Discover help directly in CLI:
 - photohelper find-raws --help
 
 Common options:
-- --processed-dir PATH
-- --framed-dir PATH
-- --target-width INT (default 1080)
-- --framed-aspect-ratio W:H (default 1:1, for example 3:4 or 4:3)
-- --target-height INT (optional explicit override)
-- --baseline-frame-width INT (default 60)
-- --frame-color R,G,B (default 255,255,255)
+- --processed PATH
+- --framed PATH
+- --width INT (default 1080)
+- --ratio W:H (default 3:4, for example 3:4 or 4:3)
+- --height INT (optional explicit override)
+- --frame-width INT (default 30)
+- --color R,G,B (default 255,255,255)
 - --extensions .jpg,.jpeg
 - --no-upscale
 - --reencode-portraits
@@ -71,12 +71,12 @@ Common options:
 
 Example with explicit output folders:
 
-photohelper framer ./instagram --processed-dir ./instagram-processed --framed-dir ./instagram-framed --validate
+photohelper framer ./instagram --processed ./instagram-processed --framed ./instagram-framed --validate
 
 Example flags for maize borders: 
---foreground-border-width 13 --foreground-border-color 255,203,5
+--border-width 13 --border-color 255,203,5
 
-By default, framed outputs are square. Use `--framed-aspect-ratio 4:3` for landscape or `--framed-aspect-ratio 3:4` for portrait framing.
+By default, framed outputs are portrait `3:4` (`1080x1440`). Use `--ratio 4:3` for landscape framing. The normal landscape split still produces `_L.jpg` and `_R.jpg`, plus `_full.jpg` containing the complete horizontal source. Approximately 2:1 images continue to produce three split outputs.
 
 ## Collage CLI
 
@@ -89,12 +89,12 @@ photohelper collage BACKGROUND FOREGROUND [FOREGROUND ...] [options]
 The foreground images are placed left-to-right in the order you pass them.
 
 Common options:
-- --output-dir PATH
-- --panel-width INT (default 1080)
-- --panel-height INT (default 1440)
-- --foreground-scale FLOAT (default 0.78)
-- --foreground-border-width INT (default 0)
-- --foreground-border-color R,G,B (default 255,255,255)
+- --output PATH
+- --width INT (default 1080)
+- --height INT (default 1440)
+- --scale FLOAT (default 0.78)
+- --border-width INT (default 0)
+- --border-color R,G,B (default 255,255,255)
 - --jpeg-quality INT
 - --jpeg-subsampling INT
 - --validate
@@ -103,15 +103,15 @@ Common options:
 
 Example:
 
-photohelper collage --foreground-border-color 255,255,255 --foreground-border-width 40 ...
+photohelper collage --border-color 255,255,255 --border-width 40 ...
 
 Example using the included test images:
 
-photohelper collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --validate
+photohelper collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output ./collage-test-images/test-collage --validate
 
 Example with maize foreground borders:
 
-photohelper collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output-dir ./collage-test-images/test-collage --foreground-border-width 18 --foreground-border-color 255,203,5 --validate
+photohelper collage ./collage-test-images/background.jpg ./collage-test-images/foreground-1.jpg ./collage-test-images/foreground-2.jpg ./collage-test-images/foreground-3.jpg --output ./collage-test-images/test-collage --border-width 18 --border-color 255,203,5 --validate
 
 The tool crops the background to an aspect ratio of roughly N:4, where N is the number of foreground images, then slices it into N vertical 1080x1440 panels. Each foreground is center-cropped to 3:4, scaled down slightly, and centered in its panel so some background remains visible.
 
@@ -125,11 +125,11 @@ Create a single center-focused rectangular panorama from an ordered sequence of 
 
 Basic usage:
 
-photohelper panorama /path/to/source-nefs --output-dir ./panorama-out --output-name panorama.tiff
+photohelper panorama /path/to/source-nefs --output ./panorama-out --name panorama.tiff
 
 Options:
-- `--output-dir PATH` : Directory to write the panorama (default: current working directory).
-- `--output-name NAME` : Output filename (default: `panorama.tiff`).
+- `--output PATH` : Directory to write the panorama (default: current working directory).
+- `--name NAME` : Output filename (default: `panorama.tiff`).
 - `--max-width INT` / `--max-height INT` : Optionally downscale inputs for memory/CPU savings.
 - `--quiet` : Suppress progress logs.
 
@@ -143,10 +143,10 @@ Notes and limitations:
 
 Find and copy NEF files that match JPG names:
 
-photohelper find-raws ./maize-and-blue /path/to/raw-source --output-dir ./select-raws
+photohelper find-raws ./maize-and-blue /path/to/raw-source --output ./select-raws
 
 Common options:
-- --output-dir PATH
+- --output PATH
 - --timeout INT
 - -v / --verbose
 

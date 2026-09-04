@@ -64,26 +64,26 @@ def add_framer_subcommand(subparsers: argparse._SubParsersAction[argparse.Argume
         epilog=(
             "Examples:\n"
             "  photohelper framer /path/to/source-images\n"
-            "  photohelper framer ./instagram --framed-aspect-ratio 4:3 --validate\n"
-            "  photohelper framer ./src --processed-dir ./instagram --framed-dir ./instagram-framed"
+            "  photohelper framer ./instagram --ratio 4:3 --validate\n"
+            "  photohelper framer ./src --processed ./instagram --framed ./instagram-framed"
         ),
     )
     parser.add_argument("source_dir", type=Path, help="Directory containing input images.")
-    parser.add_argument("--processed-dir", type=Path, help="Output directory for processed images.")
-    parser.add_argument("--framed-dir", type=Path, help="Output directory for framed images.")
-    parser.add_argument("--target-width", type=int, default=1080)
+    parser.add_argument("--processed", type=Path, help="Output directory for processed images.")
+    parser.add_argument("--framed", type=Path, help="Output directory for framed images.")
+    parser.add_argument("--width", type=int, default=1080, help="Target output width.")
     parser.add_argument(
-        "--framed-aspect-ratio",
-        default="1:1",
+        "--ratio",
+        default="3:4",
         help="Aspect ratio for framed outputs when target height is not explicitly set, in W:H form.",
     )
     parser.add_argument(
-        "--target-height",
+        "--height",
         type=int,
-        help="Explicit framed output height. If omitted, it is derived from --framed-aspect-ratio.",
+        help="Explicit framed output height. If omitted, it is derived from --ratio.",
     )
-    parser.add_argument("--baseline-frame-width", type=int, default=30)
-    parser.add_argument("--frame-color", default="255,255,255")
+    parser.add_argument("--frame-width", type=int, default=30)
+    parser.add_argument("--color", default="255,255,255")
     parser.add_argument("--jpeg-quality", type=int, default=100)
     parser.add_argument("--jpeg-subsampling", type=int, default=0)
     parser.add_argument(
@@ -115,29 +115,29 @@ def add_collage_subcommand(subparsers: argparse._SubParsersAction[argparse.Argum
         formatter_class=HelpFormatter,
         epilog=(
             "Examples:\n"
-            "  photohelper collage bg.jpg fg1.jpg fg2.jpg fg3.jpg --output-dir ./collage-out\n"
-            "  photohelper collage bg.jpg fg1.jpg fg2.jpg --foreground-border-width 18 --foreground-border-color 255,203,5"
+            "  photohelper collage bg.jpg fg1.jpg fg2.jpg fg3.jpg --output ./collage-out\n"
+            "  photohelper collage bg.jpg fg1.jpg fg2.jpg --border-width 18 --border-color 255,203,5"
         ),
     )
     parser.add_argument("background", type=Path, help="Background image used for the full collage.")
     parser.add_argument("foregrounds", type=Path, nargs="+", help="Ordered foreground images to place left-to-right.")
-    parser.add_argument("--output-dir", type=Path, help="Directory for collage outputs.")
-    parser.add_argument("--panel-width", type=int, default=1080)
-    parser.add_argument("--panel-height", type=int, default=1440)
+    parser.add_argument("--output", type=Path, help="Directory for collage outputs.")
+    parser.add_argument("--width", type=int, default=1080)
+    parser.add_argument("--height", type=int, default=1440)
     parser.add_argument(
-        "--foreground-scale",
+        "--scale",
         type=float,
         default=0.78,
         help="Scale factor for foreground images inside each panel.",
     )
     parser.add_argument(
-        "--foreground-border-width",
+        "--border-width",
         type=int,
         default=0,
         help="Optional border width to add around each foreground image. Set to 0 to disable.",
     )
     parser.add_argument(
-        "--foreground-border-color",
+        "--border-color",
         default="255,255,255",
         help="Border color as R,G,B.",
     )
@@ -157,17 +157,17 @@ def add_panorama_subcommand(subparsers: argparse._SubParsersAction[argparse.Argu
         formatter_class=HelpFormatter,
         epilog=(
             "Examples:\n"
-            "  photohelper panorama ./ordered-nefs --output-dir ./panorama-out\n"
-            "  photohelper panorama ./ordered-nefs --output-name trip-pano.tiff --max-width 3200"
+            "  photohelper panorama ./ordered-nefs --output ./panorama-out\n"
+            "  photohelper panorama ./ordered-nefs --name trip-pano.tiff --max-width 3200"
         ),
     )
     parser.add_argument("source_dir", type=Path, help="Directory containing ordered input images.")
     parser.add_argument(
-        "--output-dir",
+        "--output",
         type=Path,
         help="Output directory (default: current working directory)",
     )
-    parser.add_argument("--output-name", type=str, default="panorama.tiff", help="Output filename")
+    parser.add_argument("--name", type=str, default="panorama.tiff", help="Output filename")
     parser.add_argument("--max-width", type=int, help="Optional max width to downscale inputs for memory savings")
     parser.add_argument("--max-height", type=int, help="Optional max height to downscale inputs for memory savings")
     parser.add_argument("--quiet", action="store_true")
@@ -182,14 +182,14 @@ def add_find_raws_subcommand(subparsers: argparse._SubParsersAction[argparse.Arg
         formatter_class=HelpFormatter,
         epilog=(
             "Examples:\n"
-            "  photohelper find-raws ./maize-and-blue /mnt/archive --output-dir ./select-raws\n"
+            "  photohelper find-raws ./maize-and-blue /mnt/archive --output ./select-raws\n"
             "  photohelper find-raws ./jpgs /mnt/archive --timeout 60 -v"
         ),
     )
     parser.add_argument("jpg_dir", type=Path, help="Directory containing JPG files to match")
     parser.add_argument("raw_source", type=Path, help="Root directory to search for NEF files")
     parser.add_argument(
-        "--output-dir",
+        "--output",
         type=Path,
         help="Output directory for copied NEF files (default: jpg-dir parent + '/select-raws')",
     )
@@ -207,8 +207,8 @@ def build_parser() -> argparse.ArgumentParser:
             "Quick examples:\n"
             "  photohelper framer /path/to/source-images\n"
             "  photohelper collage background.jpg fg1.jpg fg2.jpg\n"
-            "  photohelper panorama ./ordered-nefs --output-dir ./out\n"
-            "  photohelper find-raws ./maize-and-blue /mnt/archive --output-dir ./select-raws\n\n"
+            "  photohelper panorama ./ordered-nefs --output ./out\n"
+            "  photohelper find-raws ./maize-and-blue /mnt/archive --output ./select-raws\n\n"
             "Run 'photohelper <subcommand> --help' for subcommand-specific options."
         ),
     )
@@ -223,29 +223,29 @@ def build_parser() -> argparse.ArgumentParser:
 
 def run_framer(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     source_dir = args.source_dir.resolve()
-    processed_dir = (args.processed_dir or source_dir.parent / "instagram").resolve()
-    framed_dir = (args.framed_dir or source_dir.parent / "instagram-framed").resolve()
+    processed_dir = (args.processed or source_dir.parent / "instagram").resolve()
+    framed_dir = (args.framed or source_dir.parent / "instagram-framed").resolve()
 
-    if args.target_width <= 0:
-        parser.error("--target-width must be positive")
+    if args.width <= 0:
+        parser.error("--width must be positive")
 
-    if args.target_height is None:
+    if args.height is None:
         try:
-            aspect_ratio = parse_aspect_ratio(args.framed_aspect_ratio)
+            aspect_ratio = parse_aspect_ratio(args.ratio)
         except ValueError as exc:
             parser.error(str(exc))
-        target_height = target_height_for_ratio(args.target_width, aspect_ratio)
+        target_height = target_height_for_ratio(args.width, aspect_ratio)
     else:
-        target_height = args.target_height
+        target_height = args.height
 
     if target_height <= 0:
-        parser.error("--target-height must be positive")
+        parser.error("--height must be positive")
 
-    if args.baseline_frame_width < 0:
-        parser.error("--baseline-frame-width must be non-negative")
+    if args.frame_width < 0:
+        parser.error("--frame-width must be non-negative")
 
     try:
-        frame_color = parse_rgb_color(args.frame_color)
+        frame_color = parse_rgb_color(args.color)
     except ValueError as exc:
         parser.error(str(exc))
 
@@ -257,8 +257,8 @@ def run_framer(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int
         source_dir=source_dir,
         processed_dir=processed_dir,
         framed_dir=framed_dir,
-        target_size=(args.target_width, target_height),
-        baseline_frame_width=args.baseline_frame_width,
+        target_size=(args.width, target_height),
+        baseline_frame_width=args.frame_width,
         frame_color=frame_color,
         allow_upscale=not args.no_upscale,
         image_extensions=tuple(ext.strip() for ext in args.extensions.split(",") if ext.strip()),
@@ -302,18 +302,18 @@ def run_framer(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int
 def run_collage(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     background_path = args.background.resolve()
     foreground_paths = tuple(path.resolve() for path in args.foregrounds)
-    output_dir = (args.output_dir or background_path.parent / f"{background_path.stem}-collage").resolve()
-    panel_size = (args.panel_width, args.panel_height)
+    output_dir = (args.output or background_path.parent / f"{background_path.stem}-collage").resolve()
+    panel_size = (args.width, args.height)
 
-    if args.panel_width <= 0 or args.panel_height <= 0:
-        parser.error("--panel-width and --panel-height must be positive")
-    if args.foreground_scale <= 0:
-        parser.error("--foreground-scale must be positive")
-    if args.foreground_border_width < 0:
-        parser.error("--foreground-border-width must be non-negative")
+    if args.width <= 0 or args.height <= 0:
+        parser.error("--width and --height must be positive")
+    if args.scale <= 0:
+        parser.error("--scale must be positive")
+    if args.border_width < 0:
+        parser.error("--border-width must be non-negative")
 
     try:
-        foreground_border_color = parse_rgb_color(args.foreground_border_color)
+        foreground_border_color = parse_rgb_color(args.border_color)
     except ValueError as exc:
         parser.error(str(exc))
 
@@ -334,8 +334,8 @@ def run_collage(parser: argparse.ArgumentParser, args: argparse.Namespace) -> in
         background_img,
         foreground_images,
         panel_size=panel_size,
-        foreground_scale=args.foreground_scale,
-        foreground_border_width=args.foreground_border_width,
+        foreground_scale=args.scale,
+        foreground_border_width=args.border_width,
         foreground_border_color=foreground_border_color,
     )
 
@@ -391,9 +391,9 @@ def run_panorama(parser: argparse.ArgumentParser, args: argparse.Namespace) -> i
     if not source.exists():
         parser.error(f"Source directory does not exist: {source}")
 
-    output_dir = (args.output_dir or Path.cwd()).resolve()
+    output_dir = (args.output or Path.cwd()).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    output_path = output_dir / args.output_name
+    output_path = output_dir / args.name
 
     files = list_images_sorted(source)
     if not files:

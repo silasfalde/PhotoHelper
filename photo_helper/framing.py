@@ -377,15 +377,17 @@ def validate_outputs(cfg: AppConfig, framed_borders: Dict[str, BorderSpec]) -> N
     processed_files = sorted([p.name for p in cfg.processed_dir.glob("*.jpg")])
     framed_files = sorted([p.name for p in cfg.framed_dir.glob("*.jpg")])
 
-    expected = len(portraits)
+    expected_processed = len(portraits)
+    expected_framed = len(portraits)
     for path in landscapes:
         mode = classify_source_image(load_image(path))
-        expected += 3 if mode == "landscape_triplet" else 2
-    assert len(processed_files) == expected, (
-        f"Processed count mismatch: expected {expected}, got {len(processed_files)}"
+        expected_processed += 3 if mode == "landscape_triplet" else 2
+        expected_framed += 3 if mode == "landscape_triplet" else 3
+    assert len(processed_files) == expected_processed, (
+        f"Processed count mismatch: expected {expected_processed}, got {len(processed_files)}"
     )
-    assert len(framed_files) == expected, (
-        f"Framed count mismatch: expected {expected}, got {len(framed_files)}"
+    assert len(framed_files) == expected_framed, (
+        f"Framed count mismatch: expected {expected_framed}, got {len(framed_files)}"
     )
 
     for path in landscapes:
@@ -403,6 +405,7 @@ def validate_outputs(cfg: AppConfig, framed_borders: Dict[str, BorderSpec]) -> N
             assert f"{path.stem}_R.jpg" in processed_files
             assert f"{path.stem}_L.jpg" in framed_files
             assert f"{path.stem}_R.jpg" in framed_files
+            assert f"{path.stem}_full.jpg" in framed_files
 
     for framed_name in framed_files:
         with Image.open(cfg.framed_dir / framed_name) as img:
@@ -427,6 +430,11 @@ def validate_outputs(cfg: AppConfig, framed_borders: Dict[str, BorderSpec]) -> N
             assert border.left == 0, f"Right split must have zero left border: {name}"
             assert border.right >= split_baseline, f"Right split outer border below baseline: {name}, right={border.right}"
             assert border.top >= cfg.baseline_frame_width
+            assert border.bottom >= cfg.baseline_frame_width
+        elif name.endswith("_full.jpg"):
+            assert border.left >= cfg.baseline_frame_width
+            assert border.top >= cfg.baseline_frame_width
+            assert border.right >= cfg.baseline_frame_width
             assert border.bottom >= cfg.baseline_frame_width
         elif name.endswith("_01.jpg"):
             assert border.right == 0, f"Left split must have zero right border: {name}"
