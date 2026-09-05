@@ -418,8 +418,8 @@ def run_find_raws(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
     jpg_dir = args.jpg_dir.resolve()
     raw_source = args.raw_source.resolve()
 
-    if args.output_dir:
-        output_dir = args.output_dir.resolve()
+    if args.output:
+        output_dir = args.output.resolve()
     else:
         output_dir = jpg_dir.parent / "select-raws"
 

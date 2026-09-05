@@ -75,6 +75,9 @@ class PhotoHelperTests(unittest.TestCase):
         self.assertEqual(args.border_width, 12)
         self.assertEqual(args.border_color, "1,2,3")
 
+        args = parser.parse_args(["find-raws", "jpgs", "raws", "--output", "selected"])
+        self.assertEqual(args.output, Path("selected"))
+
         with self.assertRaises(SystemExit):
             parser.parse_args(["framer", "source", "--framed-aspect-ratio", "1:1"])
 
