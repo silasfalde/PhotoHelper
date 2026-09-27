@@ -1,0 +1,81 @@
+\documentclass[10pt]{article}
+
+\usepackage[a4paper,margin=19mm]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[table]{xcolor}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{microtype}
+\usepackage{hyperref}
+
+\definecolor{ink}{HTML}{202A2D}
+\definecolor{muted}{HTML}{5B686B}
+\definecolor{accent}{HTML}{176B63}
+\definecolor{mist}{HTML}{EFF5F2}
+\definecolor{line}{HTML}{D5E0DC}
+
+\hypersetup{colorlinks=true, urlcolor=accent, linkcolor=accent}
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\small\color{muted}PHOTO DELIVERY GUIDE}
+\fancyfoot[R]{\small\color{muted}\thepage}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+\setlist[itemize]{leftmargin=1.2em,itemsep=3pt,topsep=3pt}
+\renewcommand{\arraystretch}{1.35}
+
+\begin{document}
+\color{ink}
+
+{\large\bfseries\color{accent}PHOTO DELIVERY}\hfill{\small\color{muted}A quick guide}
+\vspace{5pt}
+\hrule height 1pt
+\vspace{12pt}
+
+{\LARGE\bfseries Understanding your photo folders}\par
+\vspace{3pt}
+{\large\color{muted}What each export contains, and how split images fit together.}
+
+\vspace{12pt}
+The delivery may include several versions of the photographs, each intended for a different use. The folder names make it easy to choose the right version without changing the original files.
+
+\vspace{5pt}
+{\large\bfseries Folders in the delivery}\par
+\begin{tabularx}{\textwidth}{>{\bfseries\color{accent}}p{0.25\textwidth} X}
+\rowcolor{mist}\texttt{standard/} & Regular finished-photo exports for general sharing and saving.\\
+\texttt{lightweight/} & Smaller file-size copies intended for websites, where quicker loading is useful.\\
+\texttt{raw/} (if included) & Original camera files (NEF in this workflow), with matching \texttt{.XMP} sidecars when provided. These are source files for photo-editing software, not finished exports.\\
+\texttt{instagram/} & Clean, portrait-format exports prepared for Instagram.\\
+\texttt{instagram-framed/} & Alternate Instagram exports with a simple frame.\\
+\end{tabularx}
+
+\vspace{12pt}
+{\large\bfseries Instagram format and filenames}\par
+Instagram images use the standard portrait size of \textbf{1080 $\times$ 1440 pixels} (3:4 width-to-height) with the default export settings. Landscape photographs are split into panels so the full scene can be viewed together in a swipe-through carousel. The framed folder also includes a complete, framed version of each two-panel landscape photo, named with \texttt{\_full}.\par
+\vspace{3pt}
+\begin{tabularx}{\textwidth}{>{\ttfamily}p{0.36\textwidth} X}
+\rowcolor{mist}\textnormal{\texttt{IMG\_2048.jpg}} & A portrait or square source photo, cropped to the portrait canvas.\\
+\texttt{IMG\_2049\_L.jpg} & The left panel of a landscape photo.\\
+\texttt{IMG\_2049\_R.jpg} & The right panel of that same photo. Put the \texttt{\_L} and \texttt{\_R} images next to each other, in that order, to see the complete scene.\\
+\texttt{IMG\_2049\_full.jpg} & The complete landscape photo in one frame; this version is in \texttt{instagram-framed/}.\\
+\texttt{IMG\_2050\_01.jpg} & For especially wide photographs, three panels are numbered left to right: \texttt{\_01}, \texttt{\_02}, then \texttt{\_03}.\\
+\end{tabularx}
+
+\vspace{12pt}
+\colorbox{mist}{\parbox{\dimexpr\textwidth-2\fboxsep\relax}{%
+{\large\bfseries\color{accent}A note on the frame}\par
+The framed folder is an alternate presentation, not a different photograph. The frame is white by default and 30 pixels wide. Both folders contain portrait-sized panels; the original full-width composition is provided separately as \texttt{\_full} where applicable.
+}}
+
+\vspace{12pt}
+If the Instagram folders are grouped together in the delivery, their parent folder may be named \texttt{instagram-export/}. The \texttt{raw/} folder is included only when original camera files are part of the handoff.
+
+\vfill
+{\small\color{muted}Image dimensions and split patterns describe the standard export settings. Individual filenames vary with the source photographs.}
+
+\end{document}
