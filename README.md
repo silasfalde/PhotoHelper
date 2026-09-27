@@ -139,6 +139,31 @@ Notes and limitations:
 - The stitcher centers the panorama on the middle image, aligns images pairwise, blends seams using a simple feathering approach, and crops to a rectangular region that preserves as many input pixels as possible.
 
 
+## Crop Ratio CLI
+
+Center-crop every horizontal (width > height) image in a directory to a target aspect ratio (default `4:3`). Portrait and square images, and images already matching the target ratio, are copied through unchanged.
+
+Basic form:
+
+photohelper crop-ratio SOURCE_DIR [options]
+
+Common options:
+- --output PATH (write to a new directory)
+- --in-place (allow writing back into SOURCE_DIR, overwriting originals)
+- --ratio W:H (default 4:3)
+- --extensions .jpg,.jpeg
+- --jpeg-quality INT
+- --jpeg-subsampling INT
+- --quiet
+
+Example: convert a `standard` export folder of mixed horizontal formats (e.g. 6x4 / 3:2) into 4:3, overwriting the originals in place:
+
+photohelper crop-ratio ./standard --ratio 4:3 --in-place
+
+Example writing to a new folder instead of overwriting:
+
+photohelper crop-ratio ./standard --output ./standard-4x3 --ratio 4:3
+
 ## Raw Finder CLI
 
 Find and copy NEF files that match JPG names:
@@ -186,6 +211,7 @@ Use --extensions to customize accepted suffixes.
 - [photo_helper/collage.py](photo_helper/collage.py): collage rendering and validation
 - [photo_helper/raw.py](photo_helper/raw.py): raw-photo finder and copier
 - [photo_helper/panorama.py](photo_helper/panorama.py): panorama stitching
+- [photo_helper/reformat.py](photo_helper/reformat.py): center-crop horizontal images to a target aspect ratio
 - [photo_helper.py](photo_helper.py): consolidated CLI entrypoint
 - [photo_framer.ipynb](photo_framer.ipynb): interactive workflow and preview
 - [requirements.txt](requirements.txt): dependencies

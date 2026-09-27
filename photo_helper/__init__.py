@@ -33,6 +33,7 @@ from .common import (
 )
 from .framing_runtime import process_all, render_framed_full, render_framed_split_half, render_framed_split_third, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
 from .raw import copy_matched_raws, ensure_file_downloaded, extract_base_name, find_all_raw_files, find_jpg_files, is_file_offloaded, match_raw_to_jpg, summarize_results
+from .reformat import ReformatConfig, ReformatRecord, ReformatStats, crop_horizontal_images_to_ratio, list_reformat_source_images
 def _missing_panorama_dependency(*_args, **_kwargs):
     raise ModuleNotFoundError(
         "Panorama dependencies are missing. Install optional packages: opencv-python, rawpy, and tifffile."
@@ -54,8 +55,13 @@ __all__ = [
     "CollageRecord",
     "CollageStats",
     "ProcessRecord",
+    "ReformatConfig",
+    "ReformatRecord",
+    "ReformatStats",
     "RunStats",
     "build_collage",
+    "crop_horizontal_images_to_ratio",
+    "list_reformat_source_images",
     "bytes_to_kb",
     "classify_source_image",
     "compute_collage_canvas_size",

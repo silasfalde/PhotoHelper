@@ -10,8 +10,9 @@ from .collage import build_collage, compute_collage_canvas_size, run_collage_tes
 from .common import AppConfig, load_image, load_image_and_metadata, save_collage_output
 from .framing_runtime import process_all, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
 from .raw import copy_matched_raws, find_jpg_files
+from .reformat import ReformatConfig, crop_horizontal_images_to_ratio
 
-SUBCOMMANDS = {"framer", "collage", "panorama", "find-raws"}
+SUBCOMMANDS = {"framer", "collage", "panorama", "find-raws", "crop-ratio"}
 
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter):
@@ -198,6 +199,40 @@ def add_find_raws_subcommand(subparsers: argparse._SubParsersAction[argparse.Arg
     parser.set_defaults(handler=run_find_raws)
 
 
+def add_crop_ratio_subcommand(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    parser = subparsers.add_parser(
+        "crop-ratio",
+        help="Center-crop horizontal images in a directory to a target aspect ratio.",
+        description=(
+            "Center-crop any horizontal (width > height) images in a directory so they match a target "
+            "aspect ratio (default 4:3). Portrait/square images are copied through unchanged."
+        ),
+        formatter_class=HelpFormatter,
+        epilog=(
+            "Examples:\n"
+            "  photohelper crop-ratio ./standard --ratio 4:3 --in-place\n"
+            "  photohelper crop-ratio ./standard --output ./standard-4x3"
+        ),
+    )
+    parser.add_argument("source_dir", type=Path, help="Directory containing images to normalize.")
+    parser.add_argument("--output", type=Path, help="Output directory (default: source_dir, requires --in-place).")
+    parser.add_argument(
+        "--in-place",
+        action="store_true",
+        help="Allow writing outputs back into source_dir, overwriting originals.",
+    )
+    parser.add_argument("--ratio", default="4:3", help="Target aspect ratio for horizontal images, in W:H form.")
+    parser.add_argument(
+        "--extensions",
+        default=".jpg,.jpeg",
+        help="Comma-separated list of image extensions to include.",
+    )
+    parser.add_argument("--jpeg-quality", type=int, default=100)
+    parser.add_argument("--jpeg-subsampling", type=int, default=0)
+    parser.add_argument("--quiet", action="store_true", help="Suppress per-file progress logs.")
+    parser.set_defaults(handler=run_crop_ratio)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="photohelper",
@@ -208,7 +243,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  photohelper framer /path/to/source-images\n"
             "  photohelper collage background.jpg fg1.jpg fg2.jpg\n"
             "  photohelper panorama ./ordered-nefs --output ./out\n"
-            "  photohelper find-raws ./maize-and-blue /mnt/archive --output ./select-raws\n\n"
+            "  photohelper find-raws ./maize-and-blue /mnt/archive --output ./select-raws\n"
+            "  photohelper crop-ratio ./standard --ratio 4:3 --in-place\n\n"
             "Run 'photohelper <subcommand> --help' for subcommand-specific options."
         ),
     )
@@ -218,6 +254,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_collage_subcommand(subparsers)
     add_panorama_subcommand(subparsers)
     add_find_raws_subcommand(subparsers)
+    add_crop_ratio_subcommand(subparsers)
     return parser
 
 
@@ -469,6 +506,54 @@ def run_find_raws(parser: argparse.ArgumentParser, args: argparse.Namespace) -> 
 
             traceback.print_exc()
         return 1
+
+
+def run_crop_ratio(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    source_dir = args.source_dir.resolve()
+
+    if args.output:
+        output_dir = args.output.resolve()
+    else:
+        if not args.in_place:
+            parser.error("--output is required unless --in-place is set")
+        output_dir = source_dir
+
+    if output_dir == source_dir and not args.in_place:
+        parser.error("Writing back into source_dir requires --in-place")
+
+    try:
+        ratio = parse_aspect_ratio(args.ratio)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    if not source_dir.exists():
+        parser.error(f"Source directory does not exist: {source_dir}")
+
+    cfg = ReformatConfig(
+        source_dir=source_dir,
+        output_dir=output_dir,
+        ratio=ratio,
+        image_extensions=tuple(ext.strip() for ext in args.extensions.split(",") if ext.strip()),
+        jpeg_quality=args.jpeg_quality,
+        jpeg_subsampling=args.jpeg_subsampling,
+    )
+
+    print_heading("Crop Ratio")
+    print_kv("Source directory", cfg.source_dir)
+    print_kv("Output directory", cfg.output_dir)
+    print_kv("Target ratio", f"{ratio[0]}:{ratio[1]}")
+
+    log_callback = None if args.quiet else print
+    records, stats = crop_horizontal_images_to_ratio(cfg, log_callback=log_callback)
+
+    print_heading("Results")
+    print_kv("Discovered files", stats.discovered)
+    print_kv("Cropped", stats.cropped)
+    print_kv("Already matching", stats.already_matching)
+    print_kv("Skipped (not horizontal)", stats.skipped_non_horizontal)
+    print_kv("Errors", stats.errors)
+
+    return 1 if stats.errors > 0 else 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
