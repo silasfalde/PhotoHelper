@@ -18,6 +18,13 @@ python -m pytest tests/
 photohelper framer SOURCE --run-tests   # Built-in smoke tests
 ```
 
+## Git Workflow
+- After completing code changes, run the full suite with `python -m pytest tests/`.
+- Only after that command exits successfully, commit the changes made for the current task and push the commit to the current branch's configured upstream.
+- Check the worktree before editing and stage only explicit paths changed for the current task. Never use `git add .` or `git add -A`; leave pre-existing user changes and unrelated staged changes untouched.
+- If task changes overlap pre-existing modifications, the intended diff cannot be separated confidently, tests fail, or the branch has no configured upstream, do not commit or push; explain the blocker.
+- Never amend or rewrite existing commits, force-push, or push to a different branch. Report the test result and commit/push outcome when finished.
+
 ### Architecture at a Glance
 - **[common.py](photo_helper/common.py)**: Shared image utilities (`crop_to_aspect`, `resize_exact`, `AppConfig`)
 - **[framing.py](photo_helper/framing.py)** + **[framing_runtime.py](photo_helper/framing_runtime.py)**: Classify images (square/portrait/landscape pairs/triplets), split & frame, resize to exact target dimensions
