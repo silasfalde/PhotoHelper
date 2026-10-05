@@ -7,12 +7,13 @@ from typing import Sequence
 
 from ._version import __version__
 from .collage import build_collage, compute_collage_canvas_size, run_collage_tests, validate_collage_outputs
+from .combine import combine_portrait_pair
 from .common import AppConfig, load_image, load_image_and_metadata, save_collage_output
 from .framing_runtime import process_all, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
 from .raw import copy_matched_raws, find_jpg_files
 from .reformat import ReformatConfig, crop_horizontal_images_to_ratio
 
-SUBCOMMANDS = {"framer", "collage", "panorama", "find-raws", "crop-ratio"}
+SUBCOMMANDS = {"framer", "collage", "combine", "panorama", "find-raws", "crop-ratio"}
 
 
 class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter, argparse.RawTextHelpFormatter):
@@ -175,6 +176,25 @@ def add_panorama_subcommand(subparsers: argparse._SubParsersAction[argparse.Argu
     parser.set_defaults(handler=run_panorama)
 
 
+def add_combine_subcommand(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
+    parser = subparsers.add_parser(
+        "combine",
+        help="Place two 3:4 portrait images side by side.",
+        description="Combine two equal-sized 3:4 portrait images into one 6:4 landscape image.",
+        formatter_class=HelpFormatter,
+        epilog=(
+            "Example:\n"
+            "  photohelper combine left.jpg right.jpg --output combined.jpg"
+        ),
+    )
+    parser.add_argument("left", type=Path, help="Image to place on the left.")
+    parser.add_argument("right", type=Path, help="Image to place on the right.")
+    parser.add_argument("--output", type=Path, help="Output JPEG path (default: next to the left image).")
+    parser.add_argument("--jpeg-quality", type=int, default=100)
+    parser.add_argument("--jpeg-subsampling", type=int, default=0)
+    parser.set_defaults(handler=run_combine)
+
+
 def add_find_raws_subcommand(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     parser = subparsers.add_parser(
         "find-raws",
@@ -236,12 +256,13 @@ def add_crop_ratio_subcommand(subparsers: argparse._SubParsersAction[argparse.Ar
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="photohelper",
-        description="One CLI for framing, collages, panoramas, and raw matching.",
+        description="One CLI for framing, collages, image combining, crop-ratio processing, panoramas, and raw matching.",
         formatter_class=HelpFormatter,
         epilog=(
             "Quick examples:\n"
             "  photohelper framer /path/to/source-images\n"
             "  photohelper collage background.jpg fg1.jpg fg2.jpg\n"
+            "  photohelper combine left.jpg right.jpg --output combined.jpg\n"
             "  photohelper panorama ./ordered-nefs --output ./out\n"
             "  photohelper find-raws ./maize-and-blue /mnt/archive --output ./select-raws\n"
             "  photohelper crop-ratio ./standard --ratio 4:3 --in-place\n\n"
@@ -252,6 +273,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
     add_framer_subcommand(subparsers)
     add_collage_subcommand(subparsers)
+    add_combine_subcommand(subparsers)
     add_panorama_subcommand(subparsers)
     add_find_raws_subcommand(subparsers)
     add_crop_ratio_subcommand(subparsers)
@@ -421,6 +443,42 @@ def run_collage(parser: argparse.ArgumentParser, args: argparse.Namespace) -> in
     return 0
 
 
+def run_combine(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
+    left_path = args.left.resolve()
+    right_path = args.right.resolve()
+    output_path = (args.output or left_path.with_name(f"{left_path.stem}_combined.jpg")).resolve()
+
+    if not left_path.is_file():
+        parser.error(f"Left image does not exist: {left_path}")
+    if not right_path.is_file():
+        parser.error(f"Right image does not exist: {right_path}")
+    if output_path.suffix.lower() not in {".jpg", ".jpeg"}:
+        parser.error("--output must use a .jpg or .jpeg extension")
+    if not 1 <= args.jpeg_quality <= 100:
+        parser.error("--jpeg-quality must be between 1 and 100")
+    if args.jpeg_subsampling not in {0, 1, 2}:
+        parser.error("--jpeg-subsampling must be 0, 1, or 2")
+
+    left_image, _, icc_profile = load_image_and_metadata(left_path)
+    right_image = load_image(right_path)
+    try:
+        combined = combine_portrait_pair(left_image, right_image)
+    except ValueError as exc:
+        parser.error(str(exc))
+
+    save_collage_output(
+        combined,
+        output_path,
+        jpeg_quality=args.jpeg_quality,
+        jpeg_subsampling=args.jpeg_subsampling,
+        icc_profile=icc_profile,
+    )
+    print_heading("Results")
+    print_kv("Output file", output_path)
+    print_kv("Image size", f"{combined.width}x{combined.height}")
+    return 0
+
+
 def run_panorama(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     from .panorama import list_images_sorted, save_tiff, stitch_images_from_paths
 
@@ -569,6 +627,6 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     parsed = parser.parse_args(args)
     if not hasattr(parsed, "handler"):
-        parser.error("A subcommand is required: framer, collage, panorama, or find-raws")
+        parser.error("A subcommand is required: framer, collage, combine, panorama, or find-raws")
 
     return parsed.handler(parser, parsed)

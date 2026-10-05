@@ -21,6 +21,7 @@ from photo_helper import (
     summarize_source_images,
     validate_outputs,
 )
+from photo_helper.combine import combine_portrait_pair
 from photo_helper.framing import split_source_into_processed_panels
 from photo_helper.cli import build_parser
 
@@ -80,6 +81,28 @@ class PhotoHelperTests(unittest.TestCase):
 
         with self.assertRaises(SystemExit):
             parser.parse_args(["framer", "source", "--framed-aspect-ratio", "1:1"])
+
+        args = parser.parse_args(["combine", "left.jpg", "right.jpg", "--output", "combined.jpg"])
+        self.assertEqual(args.left, Path("left.jpg"))
+        self.assertEqual(args.right, Path("right.jpg"))
+        self.assertEqual(args.output, Path("combined.jpg"))
+
+    def test_combine_portrait_pair_preserves_order_and_dimensions(self) -> None:
+        left = Image.new("RGB", (30, 40), (200, 10, 10))
+        right = Image.new("RGB", (30, 40), (10, 200, 10))
+
+        combined = combine_portrait_pair(left, right)
+
+        self.assertEqual(combined.size, (60, 40))
+        self.assertEqual(combined.getpixel((10, 10)), (200, 10, 10))
+        self.assertEqual(combined.getpixel((40, 10)), (10, 200, 10))
+
+    def test_combine_portrait_pair_rejects_incompatible_inputs(self) -> None:
+        portrait = Image.new("RGB", (30, 40))
+        with self.assertRaisesRegex(ValueError, "identical dimensions"):
+            combine_portrait_pair(portrait, Image.new("RGB", (60, 80)))
+        with self.assertRaisesRegex(ValueError, "3:4"):
+            combine_portrait_pair(Image.new("RGB", (40, 40)), Image.new("RGB", (40, 40)))
 
     def test_builtin_smoke_tests(self) -> None:
         run_basic_tests()

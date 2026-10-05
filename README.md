@@ -1,12 +1,15 @@
 # Photo Helper
 
-Photo Helper is a single installable CLI for four workflows:
+Photo Helper is a single installable CLI for six workflows:
+
 - framing and splitting Instagram-style source photos
 - building collages from one background and ordered foregrounds
 - stitching panoramas from ordered image folders
+- center-cropping horizontal images to a target ratio
+- combining two 3:4 portrait images side by side
 - finding and copying matching raw NEF files
 
-The reusable image logic lives in the `photo_helper` package, and the CLI dispatches to subcommands such as `framer`, `collage`, `panorama`, and `find-raws`.
+The reusable image logic lives in the `photo_helper` package, and the CLI dispatches to subcommands such as `framer`, `collage`, `combine`, `crop-ratio`, `panorama`, and `find-raws`.
 
 Input directories should contain images that are square, taller, or moderately wide. Standard landscape images are split into two contiguous panels, while images that are approximately 2:1 are split into three contiguous panels. Standard landscape images also get a `_full.jpg` framed output containing the complete source image with vertical white space. All processed and framed outputs are resized to the exact target dimensions.
 
@@ -38,6 +41,7 @@ You can still run the compatibility script form:
 ./photo_helper.py framer /path/to/source-images
 
 Default outputs are created next to the source directory:
+
 - instagram (processed images at exact target size)
 - instagram-framed (framed images at exact target size with baseline)
 
@@ -48,13 +52,17 @@ Basic form:
 photohelper framer SOURCE_DIR [options]
 
 Discover help directly in CLI:
+
 - photohelper --help
 - photohelper framer --help
 - photohelper collage --help
+- photohelper combine --help
+- photohelper crop-ratio --help
 - photohelper panorama --help
 - photohelper find-raws --help
 
 Common options:
+
 - --processed PATH
 - --framed PATH
 - --width INT (default 1080)
@@ -73,7 +81,7 @@ Example with explicit output folders:
 
 photohelper framer ./instagram --processed ./instagram-processed --framed ./instagram-framed --validate
 
-Example flags for maize borders: 
+Example flags for maize borders:
 --border-width 13 --border-color 255,203,5
 
 By default, framed outputs are portrait `3:4` (`1080x1440`). Use `--ratio 4:3` for landscape framing. The normal landscape split still produces `_L.jpg` and `_R.jpg`, plus `_full.jpg` containing the complete horizontal source. Approximately 2:1 images continue to produce three split outputs.
@@ -89,6 +97,7 @@ photohelper collage BACKGROUND FOREGROUND [FOREGROUND ...] [options]
 The foreground images are placed left-to-right in the order you pass them.
 
 Common options:
+
 - --output PATH
 - --width INT (default 1080)
 - --height INT (default 1440)
@@ -116,8 +125,19 @@ photohelper collage ./collage-test-images/background.jpg ./collage-test-images/f
 The tool crops the background to an aspect ratio of roughly N:4, where N is the number of foreground images, then slices it into N vertical 1080x1440 panels. Each foreground is center-cropped to 3:4, scaled down slightly, and centered in its panel so some background remains visible.
 
 Outputs are written to a folder next to the background image by default, using:
+
 - master.jpg for the full-width collage
 - panel_01.jpg, panel_02.jpg, and so on for the individual 1080x1440 panel images
+
+## Combine CLI
+
+Place two equal-sized 3:4 portrait images side by side without resizing or cropping.
+
+```text
+photohelper combine LEFT.jpg RIGHT.jpg [--output COMBINED.jpg]
+```
+
+The output is a single 6:4 JPEG, with the first image on the left. By default it is written next to the left input as `LEFT_combined.jpg`.
 
 ## Panorama CLI
 
@@ -128,16 +148,17 @@ Basic usage:
 photohelper panorama /path/to/source-nefs --output ./panorama-out --name panorama.tiff
 
 Options:
+
 - `--output PATH` : Directory to write the panorama (default: current working directory).
 - `--name NAME` : Output filename (default: `panorama.tiff`).
 - `--max-width INT` / `--max-height INT` : Optionally downscale inputs for memory/CPU savings.
 - `--quiet` : Suppress progress logs.
 
 Notes and limitations:
+
 - The CLI reads Nikon NEF files via `rawpy` and stitches using OpenCV feature matching. By default the output is a 16-bit TIFF (`.tiff`) to preserve pixel detail. Writing a native Nikon NEF is not supported by this tool; producing a DNG or NEF would require external/proprietary converters or SDKs.
 - Stitching full-resolution NEF files can use a lot of memory and CPU. Use `--max-width`/`--max-height` to limit resource use if needed.
 - The stitcher centers the panorama on the middle image, aligns images pairwise, blends seams using a simple feathering approach, and crops to a rectangular region that preserves as many input pixels as possible.
-
 
 ## Crop Ratio CLI
 
@@ -171,6 +192,7 @@ Find and copy NEF files that match JPG names:
 photohelper find-raws ./maize-and-blue /path/to/raw-source --output ./select-raws
 
 Common options:
+
 - --output PATH
 - --timeout INT
 - -v / --verbose
@@ -180,6 +202,7 @@ Common options:
 Open and run [photo_framer.ipynb](photo_framer.ipynb).
 
 Suggested order:
+
 1. Run Cell 3 (imports)
 2. Run Cell 5 (configuration)
 3. Run Cell 11 (source summary)
@@ -191,6 +214,7 @@ The notebook imports shared logic from the `photo_helper` package so notebook an
 ## Supported Files
 
 By default, the tool processes:
+
 - .jpg
 - .jpeg
 
