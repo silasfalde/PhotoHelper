@@ -7,7 +7,7 @@ from typing import Sequence
 
 from ._version import __version__
 from .collage import build_collage, compute_collage_canvas_size, run_collage_tests, validate_collage_outputs
-from .combine import combine_portrait_pair
+from .combine import combine_pair
 from .common import AppConfig, load_image, load_image_and_metadata, save_collage_output
 from .framing_runtime import process_all, run_basic_tests, size_diagnostics_lines, summarize_source_images, validate_outputs
 from .raw import copy_matched_raws, find_jpg_files
@@ -179,17 +179,22 @@ def add_panorama_subcommand(subparsers: argparse._SubParsersAction[argparse.Argu
 def add_combine_subcommand(subparsers: argparse._SubParsersAction[argparse.ArgumentParser]) -> None:
     parser = subparsers.add_parser(
         "combine",
-        help="Place two 3:4 portrait images side by side.",
-        description="Combine two equal-sized 3:4 portrait images into one 6:4 landscape image.",
+        help="Center-crop two images and place them side by side.",
+        description=(
+            "Combine two images of any dimensions into one image of the target ratio. Each image is "
+            "center-cropped to half of the ratio (for 6:4, each becomes 3:4) before joining."
+        ),
         formatter_class=HelpFormatter,
         epilog=(
-            "Example:\n"
-            "  photohelper combine left.jpg right.jpg --output combined.jpg"
+            "Examples:\n"
+            "  photohelper combine left.jpg right.jpg --output combined.jpg\n"
+            "  photohelper combine portrait.jpg tall.jpg --ratio 6:4"
         ),
     )
     parser.add_argument("left", type=Path, help="Image to place on the left.")
     parser.add_argument("right", type=Path, help="Image to place on the right.")
     parser.add_argument("--output", type=Path, help="Output JPEG path (default: next to the left image).")
+    parser.add_argument("--ratio", default="6:4", help="Aspect ratio of the combined image, in W:H form.")
     parser.add_argument("--jpeg-quality", type=int, default=100)
     parser.add_argument("--jpeg-subsampling", type=int, default=0)
     parser.set_defaults(handler=run_combine)
@@ -459,12 +464,14 @@ def run_combine(parser: argparse.ArgumentParser, args: argparse.Namespace) -> in
     if args.jpeg_subsampling not in {0, 1, 2}:
         parser.error("--jpeg-subsampling must be 0, 1, or 2")
 
-    left_image, _, icc_profile = load_image_and_metadata(left_path)
-    right_image = load_image(right_path)
     try:
-        combined = combine_portrait_pair(left_image, right_image)
+        ratio = parse_aspect_ratio(args.ratio)
     except ValueError as exc:
         parser.error(str(exc))
+
+    left_image, _, icc_profile = load_image_and_metadata(left_path)
+    right_image = load_image(right_path)
+    combined = combine_pair(left_image, right_image, ratio)
 
     save_collage_output(
         combined,

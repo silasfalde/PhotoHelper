@@ -6,7 +6,7 @@ Photo Helper is a single installable CLI for six workflows:
 - building collages from one background and ordered foregrounds
 - stitching panoramas from ordered image folders
 - center-cropping horizontal images to a target ratio
-- combining two 3:4 portrait images side by side
+- combining two images side by side at a target ratio
 - finding and copying matching raw NEF files
 
 The reusable image logic lives in the `photo_helper` package, and the CLI dispatches to subcommands such as `framer`, `collage`, `combine`, `crop-ratio`, `panorama`, and `find-raws`.
@@ -131,13 +131,13 @@ Outputs are written to a folder next to the background image by default, using:
 
 ## Combine CLI
 
-Place two equal-sized 3:4 portrait images side by side without resizing or cropping.
+Place two images of any dimensions side by side. Each image is center-cropped to half of the target ratio (for the default 6:4, each becomes 3:4), so a 2:3 photo and a 3:4 photo combine cleanly.
 
 ```text
-photohelper combine LEFT.jpg RIGHT.jpg [--output COMBINED.jpg]
+photohelper combine LEFT.jpg RIGHT.jpg [--output COMBINED.jpg] [--ratio 6:4]
 ```
 
-The output is a single 6:4 JPEG, with the first image on the left. By default it is written next to the left input as `LEFT_combined.jpg`.
+The output is a single JPEG with the first image on the left. Both halves are scaled to the smaller crop's height, so nothing is upscaled. By default it is written next to the left input as `LEFT_combined.jpg`.
 
 ## Panorama CLI
 
