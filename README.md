@@ -169,6 +169,7 @@ Basic form:
 photohelper crop-ratio SOURCE_DIR [options]
 
 Common options:
+
 - --output PATH (write to a new directory)
 - --in-place (allow writing back into SOURCE_DIR, overwriting originals)
 - --ratio W:H (default 4:3)
