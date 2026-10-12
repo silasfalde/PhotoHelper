@@ -229,6 +229,17 @@ Use --extensions to customize accepted suffixes.
 4. Check framed outputs in the framed folder.
 5. Use --validate when you want structural checks after processing.
 
+## Automation Scripts
+
+The `scripts/` directory contains optional Bash helpers for a recurring photo workflow:
+
+- `activate-photohelper.sh` activates the repository's `.venv` when sourced. For example: `source /path/to/PhotoHelper/scripts/activate-photohelper.sh`.
+- `process-photos.sh` runs the framer on `instagram-export`, finds matching RAW files for `standard` using `raw`, then crops `standard` to 4:3 in place. Run it from the directory containing those folders; it activates this repository's `.venv` automatically.
+- `cleanup-photos.sh` moves existing `raw` and `instagram-export` directories to the system trash, then renames `select-raws` to `raw`. On Linux it requires `gio` or `trash-put`; on macOS it uses Finder. It does not permanently delete these directories.
+- `upload-photos.sh` uploads the current directory with `rclone` to `gdrive:student-life-photos/<directory-name>`. Configure the `gdrive` remote with rclone before running it.
+
+Run the executable workflow scripts from the photo directory with `./scripts/process-photos.sh`, `./scripts/cleanup-photos.sh`, or `./scripts/upload-photos.sh`. The activation helper is intended to be sourced rather than run as a separate process.
+
 ## Project Structure
 
 - [photo_helper/common.py](photo_helper/common.py): shared dataclasses and image/file helpers
