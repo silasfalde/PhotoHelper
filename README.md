@@ -30,6 +30,37 @@ After that, run:
 
 photohelper --help
 
+## Shell shortcuts
+
+The scripts in `scripts/` can be installed as shell functions so they can be
+run without typing the repository path. The installer supports Bash on Ubuntu
+and Zsh on macOS:
+
+```bash
+./scripts/install-shell-functions.sh
+```
+
+If the installer cannot identify the shell, specify it explicitly:
+
+```bash
+./scripts/install-shell-functions.sh bash
+./scripts/install-shell-functions.sh zsh
+```
+
+The installer adds functions for `process-photos`, `cleanup-photos`, and
+`upload-photos` to the appropriate shell startup file. It excludes helper
+scripts such as `activate-photohelper.sh`.
+
+Reload the shell after installation, or run the printed `source` command.
+The functions preserve the current working directory, so from a photo project
+folder you can run:
+
+```bash
+process-photos
+cleanup-photos
+upload-photos
+```
+
 ## Quick Start
 
 Run against any directory of images:
