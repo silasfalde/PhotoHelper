@@ -7,7 +7,8 @@ move_to_trash() {
         Darwin)
             osascript \
                 -e 'on run argv' \
-                -e 'tell application "Finder" to delete POSIX file (item 1 of argv)' \
+                -e 'set itemAlias to POSIX file (item 1 of argv) as alias' \
+                -e 'tell application "Finder" to delete itemAlias' \
                 -e 'end run' \
                 "$PWD/${1#./}"
             ;;
