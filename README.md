@@ -266,10 +266,24 @@ The `scripts/` directory contains optional Bash helpers for a recurring photo wo
 
 - `activate-photohelper.sh` activates the repository's `.venv` when sourced. For example: `source /path/to/PhotoHelper/scripts/activate-photohelper.sh`.
 - `process-photos.sh` runs the framer on `instagram-export`, finds matching RAW files for `standard` using `raw`, then crops `standard` to 4:3 in place. Run it from the directory containing those folders; it activates this repository's `.venv` automatically.
+- `rebuild-venv.sh [python]` deletes and recreates `.venv` and reinstalls dependencies (see Troubleshooting).
 - `cleanup-photos.sh` moves existing `raw` and `instagram-export` directories to the system trash, then renames `select-raws` to `raw`. On Linux it requires `gio` or `trash-put`; on macOS it uses Finder. It does not permanently delete these directories.
 - `upload-photos.sh` uploads the current directory with `rclone` to `gdrive:student-life-photos/<directory-name>`. Configure the `gdrive` remote with rclone before running it.
 
 Run the executable workflow scripts from the photo directory with `./scripts/process-photos.sh`, `./scripts/cleanup-photos.sh`, or `./scripts/upload-photos.sh`. The activation helper is intended to be sourced rather than run as a separate process.
+
+## Troubleshooting
+
+**`ModuleNotFoundError: No module named 'photo_helper'` (or `PIL`) when running `process-photos`**
+
+The repository's `.venv` is broken, usually because the system Python was upgraded (e.g. 3.12 to 3.14) after the venv was created. The venv's `bin/python` is a symlink to the system interpreter, so it then points at a Python that lacks the venv's packages. Check with `grep version .venv/pyvenv.cfg` and `readlink -f .venv/bin/python`; if the versions differ, rebuild:
+
+```bash
+./scripts/rebuild-venv.sh              # uses python3
+./scripts/rebuild-venv.sh /usr/bin/python3.12   # or pick an interpreter
+```
+
+If `python3 -m venv` fails with an `ensurepip` error, that Python lacks venv support; install `python3-venv` or pass an interpreter that has it. Re-running `install-shell-functions.sh` does not fix this. The workflow scripts now run a health check on activation and print these instructions when it fails.
 
 ## Project Structure
 

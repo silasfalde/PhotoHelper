@@ -53,6 +53,8 @@ mkdir -p -- "$FUNCTIONS_DIR"
         find "$SCRIPT_DIR" -maxdepth 1 -type f -name '*.sh' \
             ! -name 'activate-photohelper.sh' \
             ! -name 'install-shell-functions.sh' \
+        ! -name 'rebuild-venv.sh' \
+            ! -name 'rebuild-venv.sh' \
             -print | sort
     )
 } > "$FUNCTIONS_FILE"
@@ -72,6 +74,7 @@ done < <(
     find "$SCRIPT_DIR" -maxdepth 1 -type f -name '*.sh' \
         ! -name 'activate-photohelper.sh' \
         ! -name 'install-shell-functions.sh' \
+        ! -name 'rebuild-venv.sh' \
         -print | sort
 )
 printf '\nReload your shell or run: %s\n' "$source_command"
