@@ -10,7 +10,7 @@ fi
 photohelper find-raws standard raw
 
 if [ -d "./raw" ] && [ -d "./select-raws" ]; then
-    echo "💾 Preserving DSC edits for selected raw files..."
+    echo "💾 Preserving edit sidecars for selected raw files..."
     python3 - "./raw" "./select-raws" <<'PY'
 import filecmp
 import os
@@ -38,9 +38,12 @@ try:
     for root, _, files in os.walk(raw_dir, onerror=raise_walk_error):
         for name in files:
             source = Path(root) / name
-            if source.suffix.casefold() != ".dsc":
+            if source.suffix.casefold() == ".dsc":
+                stem = source.stem.casefold()
+            elif name.casefold().endswith(".nef.xmp"):
+                stem = name[:-len(".nef.xmp")].casefold()
+            else:
                 continue
-            stem = source.stem.casefold()
             base, separator, duplicate = stem.rpartition("_")
             if stem not in kept_stems and not (
                 separator and duplicate.isdecimal() and base in kept_stems
@@ -51,7 +54,7 @@ try:
             existing = destinations.get(key)
             if existing is not None:
                 if not existing.is_file() or not filecmp.cmp(source, existing, shallow=False):
-                    raise ValueError(f"Conflicting DSC files: {source} and {existing}")
+                    raise ValueError(f"Conflicting edit sidecar files: {source} and {existing}")
                 continue
             destinations[key] = source
             copies.append((source, selected_dir / name))
@@ -62,7 +65,7 @@ try:
         shutil.copystat(source, destination)
         print(f"Preserved {source} -> {destination}")
 except (OSError, ValueError) as error:
-    sys.exit(f"Error preserving DSC files: {error}")
+    sys.exit(f"Error preserving edit sidecars: {error}")
 PY
 fi
 

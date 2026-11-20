@@ -70,6 +70,40 @@ def test_process_selects_matching_dsc_files(tmp_path: Path) -> None:
         assert image.size == (27, 20)
 
 
+def test_process_selects_xmp_sidecars_for_selected_raws(tmp_path: Path) -> None:
+    _, raw = setup_selection(tmp_path)
+    nested = raw / "nested"
+    nested.mkdir()
+    for name in ("DSC_1234.NEF.xmp", "dsc_1234_01.nef.XMP", "DSC_1234_10.NEF.xmp"):
+        (nested / name).write_bytes(name.encode())
+    for name in ("DSC_12345.NEF.xmp", "DSC_1234_extra.NEF.xmp", "DSC_5678.NEF.xmp"):
+        (raw / name).write_bytes(b"unselected")
+
+    result = run_process(tmp_path)
+
+    assert result.returncode == 0, result.stderr
+    selected = tmp_path / "select-raws"
+    assert {path.name for path in selected.iterdir()} == {
+        "DSC_1234.NEF", "DSC_1234.NEF.xmp", "dsc_1234_01.nef.XMP", "DSC_1234_10.NEF.xmp"
+    }
+    assert (selected / "DSC_1234_10.NEF.xmp").read_bytes() == b"DSC_1234_10.NEF.xmp"
+
+
+def test_process_stops_on_conflicting_xmp_sidecars(tmp_path: Path) -> None:
+    _, raw = setup_selection(tmp_path)
+    selected = tmp_path / "select-raws"
+    selected.mkdir()
+    (selected / "DSC_1234.NEF.xmp").write_bytes(b"existing edit")
+    (raw / "DSC_1234.NEF.xmp").write_bytes(b"different edit")
+
+    result = run_process(tmp_path)
+
+    assert result.returncode != 0
+    assert "DSC_1234.NEF.xmp" in result.stderr
+    assert (selected / "DSC_1234.NEF.xmp").read_bytes() == b"existing edit"
+    assert (raw / "DSC_1234.NEF.xmp").read_bytes() == b"different edit"
+
+
 def test_process_does_not_overwrite_conflicting_edits(tmp_path: Path) -> None:
     standard, raw = setup_selection(tmp_path)
     selected = tmp_path / "select-raws"
@@ -110,7 +144,7 @@ def test_process_stops_on_conflicting_sidecars_in_raw_subdirectories(tmp_path: P
     result = run_process(tmp_path)
 
     assert result.returncode != 0
-    assert "Conflicting DSC files" in result.stderr
+    assert "Conflicting edit sidecar files" in result.stderr
     assert (raw / "one" / "DSC_1234.dsc").exists()
     assert (raw / "two" / "DSC_1234.dsc").exists()
     assert not (tmp_path / "select-raws" / "DSC_1234.dsc").exists()
